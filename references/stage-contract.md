@@ -96,7 +96,7 @@ To let headless Chromium verify layout integrity on every beat:
 
 ---
 
-## 7. Minimal Reference Skeleton
+## 7. Minimal Reference Skeleton (with `at()` Intra-Beat Choreography)
 
 ```html
 <style>
@@ -134,6 +134,53 @@ function fitStage() {
 window.addEventListener("resize", fitStage);
 fitStage();
 
+// Intra-beat timer scheduler: compatible with ?still and record-video.mjs virtual clock.
+// record-video.mjs scales setTimeout, setInterval, requestAnimationFrame, Date.now(), and performance.now().
+let beatTimers = [];
+let beatRafIds = [];
+
+function clearBeatTimeline() {
+  beatTimers.forEach((id) => clearTimeout(id));
+  beatRafIds.forEach((id) => cancelAnimationFrame(id));
+  beatTimers = [];
+  beatRafIds = [];
+}
+
+function at(ms, fn, { liveOnly = false } = {}) {
+  if (isStill) {
+    if (!liveOnly) fn(); // Settle final frame synchronously for ?still / lint / PDF
+    return;
+  }
+  if (ms <= 0) {
+    fn();
+    return;
+  }
+  beatTimers.push(setTimeout(fn, ms));
+}
+
+function animateValue(durationMs, onFrame, { liveOnly = false } = {}) {
+  if (isStill) {
+    if (!liveOnly) onFrame(1);
+    return;
+  }
+  const start = performance.now();
+  function tick(now) {
+    const t = Math.min(1, (now - start) / durationMs);
+    onFrame(1 - Math.pow(1 - t, 3));
+    if (t < 1) beatRafIds.push(requestAnimationFrame(tick));
+  }
+  beatRafIds.push(requestAnimationFrame(tick));
+}
+
+function renderBeat(index) {
+  clearBeatTimeline();
+  activeIndex = Math.max(0, Math.min(BEATS.length - 1, index));
+  const beat = BEATS[activeIndex];
+  // 1. Reset transient states & update persistent protagonist / #world camera transform
+  // 2. Schedule intra-beat choreography with at(ms, fn, { liveOnly }) and animateValue(...)
+  beat.enter?.({ at, animateValue, isStill });
+}
+
 window.__beatdeck = {
   version: "1.0",
   meta: { title: "Deck Title", width: 1920, height: 1080, speechRate: 3.6 },
@@ -142,7 +189,7 @@ window.__beatdeck = {
     say: b.say, duration: b.duration, note: b.note, pdfSkip: Boolean(b.pdfSkip)
   })),
   current: () => activeIndex,
-  goTo: (index) => renderBeat(Math.max(0, Math.min(BEATS.length - 1, index))),
+  goTo: (index) => renderBeat(index),
   setSubtitle: (text) => { /* update #subtitle text & visibility */ }
 };
 

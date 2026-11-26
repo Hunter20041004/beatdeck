@@ -4,15 +4,37 @@ Beatdeck treats a presentation as a short directed film on a fixed `1920x1080` c
 
 ---
 
-## 1. Invent One Visual World Per Topic
+## 1. Visual Direction Proposals & Alignment
 
-Before writing CSS or scripting beats, establish the **single physical or conceptual world** the audience inhabits for the entire talk:
+Never jump straight into writing `BEATS` or CSS with a single default aesthetic. Before scripting, synthesize the user's subject, audience, and tone, then propose **2–3 genuinely distinct visual world directions** plus a recommended **Motion Intensity Tier**.
 
-- **Derive the metaphor from the domain**:
-  - Software architecture or system flow -> an architectural cross-section, blueprint table, or signal schematic.
-  - Field research or civic infrastructure -> a topographic map, dispatch board, or field notebook.
-  - Product craft or editorial workflow -> a director's light-table, specimen sheet, or workbench.
-  - Historical or strategic narrative -> a continuous spatial timeline where earlier events stay anchored off-camera.
+### How to Craft Non-Generic Proposals
+Each proposal must inhabit a different physical or conceptual world—never three color swaps of the same dark card layout. Specify four concrete elements for every option:
+1. **Spatial Metaphor**: What physical or mental space does the `1920x1080` stage represent? (e.g., an editorial light-table, a dispatch console, a folded architectural blueprint, an archival specimen dossier, a sunlit studio wall, a broadcast control deck).
+2. **Surface & Palette**: Exact paper/ground tone, primary ink contrast, and 1–2 purposeful accents derived from the topic's real artifacts.
+3. **Typography Voice**: Display/serif/sans/mono pairing tuned to the subject (with realistic CJK/Latin system fallbacks for offline headless rendering).
+4. **Visual Signature**: One recurring structural motif or camera move that belongs uniquely to this topic (e.g., a vertical day/night split line, a continuous ledger spine, a zooming microscope reticle).
+
+### Alignment Protocol
+- Present the 2–3 directions side by side, highlight which one you recommend (and which Motion Intensity Tier fits best), and ask the user **once** to pick, combine, or tweak before you start building.
+- Skip asking only if the user explicitly tells you to decide for them or when running in a non-interactive headless pipeline—in that case, state the chosen direction and tier upfront in your plan/summary before writing HTML.
+
+---
+
+## 2. Motion Intensity Tiers
+
+Match motion density to the subject and venue rather than animating everything at maximum speed. Pick one tier intentionally:
+
+| Tier | Motion Grammar | Best Suited For |
+| :--- | :--- | :--- |
+| **`Measured`** | Calm architectural reveals, slow purposeful camera glides, crisp rule extensions and editorial type wipes. Few or zero decorative loops. | Luxury editorial talks, archival dossiers, minimalist essays, board briefings. |
+| **`Choreographed`** | 2–3 sequenced intra-beat actions via `at(ms, fn)`, SVG path drawing (`stroke-dashoffset`), live numeric roll-ups (`countUp`), and persistent motif morphing across beats. | Product demos, conference keynotes, research findings, technical walkthroughs. |
+| **`Kinetic`** | Dense multi-stage beat timelines, simulated cursor/UI interactions, mechanical flips/stamps, optical flicker or particle drift, and `liveOnly` ambient motion. | Game showcases, consumer launches, interactive trailers, high-energy pitch reels. |
+
+---
+
+## 3. Single-World Stage & Anti-Patterns
+
 - **Use a `#world` camera inside `#stage`**:
   - Keep `#stage` at `1920x1080` as the viewport frame, and optionally translate/scale an inner `#world` canvas across beats so the camera glides from wide context to fine detail and pulls back out for synthesis.
   - When `?still` is active, disable transitions so the camera snaps directly to each beat's settled transform for crisp screenshots and PDFs.
@@ -23,6 +45,7 @@ Before writing CSS or scripting beats, establish the **single physical or concep
 
 ### Visual Anti-Patterns to Reject
 
+- Recycling one safe aesthetic across unrelated topics instead of inventing a world from the subject.
 - Purple-blue "AI glow" gradients, neon glassmorphism, or dark SaaS boilerplate.
 - Card-inside-card nesting (borders around blocks that already sit inside bordered panels).
 - Three-column icon grids with generic bullet summaries.
@@ -31,7 +54,33 @@ Before writing CSS or scripting beats, establish the **single physical or concep
 
 ---
 
-## 2. Beat-Driven Storytelling (`BEATS`)
+## 4. Intra-Beat Choreographic Vocabulary & Rules
+
+Instead of treating a beat as one instantaneous state swap, direct what happens **inside** the beat using a scheduled timeline (`at(ms, fn, { liveOnly })`) and persistent visual elements.
+
+### Core Rules
+1. **Always cancel pending timers on `goTo()`**: Stepping backward or clicking quickly must clear every scheduled `at()` timer from the previous beat before starting the new beat's timeline.
+2. **Deterministic `?still` convergence**: When `?still` is active, every non-`liveOnly` `at()` callback must execute **synchronously** during `goTo()` (with final CSS values applied and transitions disabled), so `lint.mjs`, `pdf-export.mjs`, and `?still&p=N` snapshots capture the exact completed state of the beat.
+3. **Never block `?still` with infinite loops**: Any continuous breathing, cursor blink, shimmer, or ambient loop **must** pass `{ liveOnly: true }` so `?still` skips it cleanly.
+4. **Virtual-clock compatibility**: Use standard `setTimeout`, `requestAnimationFrame`, `performance.now()`, and CSS transitions/animations (never unscaled external wall clocks) so `scripts/record-video.mjs` (`--slow`) scales every choreographed beat accurately without dropped frames.
+5. **Persistent protagonists across beats**: Whenever possible, carry a central artifact (a timeline spine, browser frame, map path, or focal diagram) across adjacent beats and morph its position, zoom, or state instead of fading out an entire layout and fading in a brand-new box.
+
+### Motion Vocabulary
+
+| Primitive | Mechanism & Role | `?still` Settlement |
+| :--- | :--- | :--- |
+| **`at(ms, fn, { liveOnly })`** | Sequences beat actions at explicit millisecond offsets (e.g., `0ms` camera settle, `280ms` path draw, `620ms` stamp). | Non-`liveOnly` runs immediately in order; `liveOnly` skipped. |
+| **Persistent protagonist** | Shared DOM/SVG element anchored in `#world` or `#stage` whose class/transform evolves across consecutive beats. | Snaps directly to target transform/state. |
+| **`draw` (`stroke-dashoffset`)** | Animates SVG strokes from `offset = totalLength` to `0` to trace connectors, signatures, routes, or chart curves. | Sets `stroke-dashoffset: 0` immediately. |
+| **`countUp`** | Rolls key numbers from `0` (or prior value) to the verified target figure using `requestAnimationFrame` easing. | Writes the final formatted target number immediately. |
+| **`typewriter`** | Reveals command lines, queries, or dialogue character-by-character or token-by-token. | Renders full final string immediately. |
+| **`cursor`** | Moves a crisp SVG pointer along waypoints and triggers hover/click ripples on UI targets before a state flip. | Lands at final target waypoint with clicked state applied. |
+| **`stamp` / `strike` / `wipe`** | Tactile editorial gestures: ink-stamp impact (`scale(1.25)->1`), horizontal redaction/strikethrough rule, or `clip-path` mask reveal. | Applies settled `scale(1)`, full strike width, and open `clip-path`. |
+| **`ambient` (`liveOnly: true`)** | Subtle idle pulse, film-grain drift, blinking caret, or floating telemetry once the beat has settled. | Omitted (`liveOnly: true`) so static exports stay razor-sharp. |
+
+---
+
+## 5. Beat-Driven Storytelling (`BEATS`)
 
 A **beat** is the smallest atomic unit of meaning: **one idea and one visual change**.
 
@@ -43,7 +92,7 @@ A **beat** is the smallest atomic unit of meaning: **one idea and one visual cha
 
 ---
 
-## 3. Single Source of Truth
+## 6. Single Source of Truth
 
 Keep narrative, timing, and metadata in a single `BEATS` array inside the deck:
 
@@ -72,19 +121,19 @@ Never maintain a separate script document that can drift from the deck. Edit `BE
 
 ---
 
-## 4. Multi-Mode Delivery Design
+## 7. Multi-Mode Delivery Design
 
 Design the stage once so all five delivery modes work without forks:
 
 - **Live Presentation**: Keyboard (`ArrowRight`/`Space`, `ArrowLeft`), click zones (left 25% / right 75%), `F` fullscreen, and `N` speaker-notes drawer.
 - **Presenter PiP Recording (`C` Safe Zone)**: Pressing `C` displays a `400x300` safe-zone frame in the bottom-right corner of `#stage` (`x: 1520..1920, y: 780..1080` minus padding). If the talk will be recorded with a webcam overlay, keep essential headlines, labels, and focal graphics outside that corner.
-- **Static Slides & Storyboard PDF**: `?still` disables all animations/transitions and hides interactive chrome; `?still&bare` also hides `#subtitle` for clean storyboard thumbnails.
+- **Static Slides & Storyboard PDF**: `?still` disables all animations/transitions, settles non-`liveOnly` `at()` choreography, and hides interactive chrome; `?still&bare` also hides `#subtitle` for clean storyboard thumbnails.
 - **Self-Contained Share HTML**: `scripts/bundle-share.mjs` inlines local stylesheets, scripts, fonts, and images into one portable HTML file.
 - **Deterministic 60fps MP4**: `?video` hides interactive chrome while preserving `#stage` and optional `#subtitle`, allowing virtual-clock screencast capture at slow playback rate for zero dropped frames.
 
 ---
 
-## 5. Typography Discipline & CJK / Latin Line Locking
+## 8. Typography Discipline & CJK / Latin Line Locking
 
 Uncontrolled line wrapping destroys visual balance—especially when mixing CJK headlines with Latin words or large inline numbers, or when font metrics shift slightly across machines.
 
@@ -99,7 +148,7 @@ Uncontrolled line wrapping destroys visual balance—especially when mixing CJK 
 
 ---
 
-## 6. Three-Lens Verification Gate Before Delivery
+## 9. Three-Lens Verification Gate Before Delivery
 
 Before marking a deck finished:
 

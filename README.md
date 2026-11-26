@@ -10,9 +10,16 @@ An open-source Agent Skill and headless Chromium toolkit for crafting film-like,
 | | Traditional Slides (PPT / Deck Builders) | Video Frameworks (Remotion) | Beatdeck |
 | :--- | :--- | :--- | :--- |
 | **Visual Model** | Disconnected rectangles & bullet templates | React timeline components & build steps | One continuous `1920×1080` visual world per topic |
-| **Authoring Unit** | Static pages | Frame-accurate JSX animations | Narrative **beats** (`BEATS` array) with one idea + one visual change |
+| **Authoring Unit** | Static pages | Frame-accurate JSX animations | Narrative **beats** (`BEATS` array) with `at()` intra-beat choreography |
+| **Direction & Motion** | Fixed themes & canned transitions | Manual component wiring | Pre-build **2–3 bespoke style proposals** + 3 Motion Tiers (`Measured` / `Choreographed` / `Kinetic`) |
 | **Single Source of Truth** | Separate speaker doc & slides drift quickly | Video-only output; no live talk mode | One HTML drives Live Talk, Notes, Script, PDF, Share HTML & MP4 |
 | **Dependencies** | Office / browser SaaS | Node + bundler + React ecosystem | Plain HTML/CSS/JS + Playwright Chromium (`ffmpeg` optional for MP4) |
+
+### What's New in v1.1
+
+- **Visual Direction Alignment**: Before writing `BEATS` or CSS, the skill proposes **2–3 distinct visual world directions** tailored to your topic and aligns on look and feel upfront.
+- **3 Motion Intensity Tiers**: Choose `Measured` (calm architectural editorial), `Choreographed` (sequenced multi-step reveals & SVG draws), or `Kinetic` (cursor interactions, mechanical stamps, and ambient life).
+- **Intra-Beat Choreography (`at(ms, fn, { liveOnly })`)**: Direct multi-stage timelines, SVG line-drawing, live counters, and persistent stage protagonists inside each beat—automatically settling into clean `?still` snapshots and scaling cleanly under `record-video.mjs`.
 
 ---
 
