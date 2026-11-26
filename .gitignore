@@ -1,0 +1,10 @@
+node_modules/
+*.mp4
+*.mov
+*.pdf
+*-share.html
+*-frames/
+examples/**/out/
+.DS_Store
+.tmp/
+tmp/

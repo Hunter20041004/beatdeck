@@ -1,0 +1,119 @@
+# Export, Linting, and Recording CLI
+
+All CLI tools run in Node.js (`>= 20`) using Playwright's bundled headless Chromium (`scripts/lib/browser.mjs`). No system Chrome installation or Python dependencies are required.
+
+Resolve `<skill-dir>` (the directory containing `SKILL.md`). If `<skill-dir>/node_modules/` is missing, run the one-time setup inside `<skill-dir>`:
+
+```bash
+cd <skill-dir> && npm install && npx playwright install chromium
+```
+
+Invoke tools from the user's workspace using `node <skill-dir>/scripts/<tool>.mjs <path/to/deck.html> ...`, passing explicit `--out` paths when saving into the workspace.
+
+`record-video.mjs` additionally requires `ffmpeg` on `PATH` unless run with `--frames-only` (`ffprobe` is used only by `npm test` to verify encoded video streams).
+
+---
+
+## 1. Layout & Contract Linter (`scripts/lint.mjs`)
+
+```bash
+node <skill-dir>/scripts/lint.mjs <deck.html>
+```
+
+Loads `<deck.html>?still&p=1` at `1920×1080`, verifies `#stage` intrinsic dimensions (`1920×1080`) and `window.__beatdeck` with at least one beat, and steps through every beat (`goTo(i)`):
+
+- **Runtime errors**: Fails on any `pageerror` or console `error`.
+- **Broken images**: Checks every visible `<img>` inside `#stage` has `complete && naturalWidth > 0`.
+- **Stage containment**: Verifies visible text rectangles inside `#stage` remain within `1920×1080` logical bounds (`±1px` tolerance).
+- **Line-wrap guard**: Checks every visible element inside `#stage` that defines `data-expected-lines`, `data-lint-lines`, or contains `<br>` tags. Visual lines are clustered via `Range.getClientRects()` by vertical overlap so mixed CJK characters and large inline numbers are counted accurately. Fails if `actualLines > expectedLines`.
+
+Exits `0` when every beat passes; exits `1` with per-beat diagnostics on any failure.
+
+---
+
+## 2. Speaker Script Exporter (`scripts/script-export.mjs`)
+
+```bash
+node <skill-dir>/scripts/script-export.mjs <deck.html> [--out script.md] [--rate 3.6]
+```
+
+Reads `window.__beatdeck.meta` and `window.__beatdeck.list()`. When `--out` is omitted, writes Markdown directly to **`stdout`** (there is no default output file). Output contains:
+
+- Deck title and total estimated duration (`mm:ss`).
+- Per-speaker duration and beat breakdown.
+- Timestamped table: `| Beat | Start | Sec | Chapter | Speaker | Line |` — when `beat.note` is non-empty, `*(Note: ...)*` is appended inside the `Line` cell.
+
+### Duration Calculation
+
+For each beat:
+1. If `beat.duration` is explicitly set, that value (in seconds) is used.
+2. Otherwise, duration is estimated from `beat.say`:
+   - CJK characters (`\u3400-\u4dbf`, `\u4e00-\u9fff`, `\u3040-\u30ff`) divided by `--rate` (falls back to `meta.speechRate`, then `3.6` chars/s).
+   - Latin words divided by `2.5` words/s.
+   - Minimum `1.5s` when `say` is empty.
+
+---
+
+## 3. PDF Exporter (`scripts/pdf-export.mjs`)
+
+```bash
+node <skill-dir>/scripts/pdf-export.mjs <deck.html> [--mode slides|storyboard] [--out deck.pdf] [--cols 2]
+```
+
+Exports printable `1920×1080` landscape PDFs while skipping any beat with `pdfSkip: true` (preserving original 1-based beat numbers):
+
+- **`--mode slides`** (default; default `--out`: `./deck.pdf` in current working directory): Captures each non-skipped beat at `?still&p=N` and compiles one full-bleed `1920×1080` page per beat.
+- **`--mode storyboard`** (default `--out`: `./storyboard.pdf` in current working directory): Captures each non-skipped beat at `?still&bare&p=N` (hiding subtitles and chrome) and lays out `--cols` (`2` or `3`) frame cards per page with beat number, chapter title, and `say` caption underneath.
+
+Temporary frame images are cleaned up automatically after PDF rendering.
+
+---
+
+## 4. Self-Contained Share Bundler (`scripts/bundle-share.mjs`)
+
+```bash
+node <skill-dir>/scripts/bundle-share.mjs <deck.html> [--out deck-share.html]
+```
+
+Default `--out` when omitted: `<deckDir>/<name>-share.html` alongside the source deck.
+
+Produces a single portable HTML file that works offline or via email/file-share:
+
+- Resolves relative `<link rel="stylesheet" href="...">`, `<script src="...">`, `<img src="...">`, `<video poster="...">`, SVG `<image href/xlink:href>`, `srcset`, and CSS `@import` / `url(...)` references (leaving `http://`, `https://`, `data:`, and `#` untouched).
+- Inlines local stylesheets and scripts and base64-encodes binary assets (`png`, `jpg`, `webp`, `svg`, `woff2`, `mp3`, etc.).
+- Verifies no unresolved local asset paths remain and errors clearly if a referenced file is missing.
+
+---
+
+## 5. Deterministic 60fps Video Recorder (`scripts/record-video.mjs`)
+
+```bash
+node <skill-dir>/scripts/record-video.mjs <deck.html> [--out deck.mp4] [--plan plan.json] [--fps 60] [--slow 3] [--audio track.wav] [--frames-only]
+```
+
+Default `--out` when omitted: `./<name>.mp4` in the current working directory, or `<dir>/<name>-frames/` when `--frames-only` is passed (if `--out` ends in `.mp4`/`.mov`/`.webm` with `--frames-only`, it normalizes to `<stem>-frames`).
+
+Captures CSS animations, camera pans, and beat transitions without dropped frames by running Chromium under a deterministic virtual clock:
+
+1. **Schedule generation**: If `--plan` is omitted, reads `window.__beatdeck.list()` and computes sequential start times using `beat.duration` or estimated `say` duration.
+2. **Slow-motion virtual clock**: Injects an init script scaling `setTimeout`, `setInterval`, `requestAnimationFrame`, `Date.now()`, and `performance.now()` by `--slow` (default `3`), sets CDP `Animation.enable` + `Animation.setPlaybackRate({ playbackRate: 1 / slow })` before page navigation, and opens `?video&p=1`.
+3. **Frame capture & resampling**: Records frames via CDP `Page.startScreencast` (`1920×1080` JPEG) while firing `goTo()` and `setSubtitle()` on schedule, then resamples frames monotonically into `Math.round(total * fps)` numbered frames (`s%06d.jpg`) and prints a frame-drop report separating static holds from active-motion intervals.
+4. **Encoding**: Encodes `yuv420p` H.264 MP4 (`libx264`, `-preset medium`, `-crf 16`, `-movflags +faststart`), muxing `--audio` if supplied. Pass `--frames-only` to retain the resampled `fps` frames (`s%06d.jpg`) in the output directory and skip `ffmpeg`.
+
+### Custom `--plan plan.json` Schema
+
+Use `--plan` when syncing beats to a pre-recorded voiceover or customizing subtitle cues. Note that `beat` / `index` inside `--plan` are **0-based** (whereas `?p=N` and the `p` field are 1-based):
+
+```json
+{
+  "total": 24.0,
+  "events": [
+    { "at": 0.0, "beat": 0, "subtitle": "First spoken line." },
+    { "at": 4.8, "beat": 1, "subtitle": "Second beat arrives on cue." },
+    { "at": 9.5, "subtitle": "Mid-beat subtitle update without advancing." }
+  ]
+}
+```
+
+- **Supported aliases**: Top-level may be an array or `{ events | beats | cues, total | totalDuration }`; each item accepts `{ at | start, beat | index | p (1-based), subtitle | say, duration }`.
+- **Subtitle-only cues**: Omit `beat`/`index`/`p` to update `#subtitle` mid-beat without calling `goTo()`.
