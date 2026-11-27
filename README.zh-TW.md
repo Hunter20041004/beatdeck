@@ -15,6 +15,27 @@
 | **單一資料來源** | 投影片與講稿分開寫，改完就不同步 | 只能輸出影片，無法直接上台簡報 | 同一份 HTML 同時產出現場簡報、備忘錄、講稿、PDF、分享檔與 MP4 |
 | **執行環境** | 辦公軟體或雲端簡報服務 | Node + 打包器 + React 生態系 | 純原生 HTML/CSS/JS ＋ Playwright Chromium（輸出 MP4 時另需 `ffmpeg`） |
 
+### v1.4 新增亮點：AI 痕跡防護
+
+- **整理成冊的「AI 簡報通病」清單**：[`references/ai-tells.md`](references/ai-tells.md) 涵蓋：
+  - **視覺**：紫藍漸層、毛玻璃、emoji 圖示、文字牆、「議程／謝謝聆聽」頁
+  - **內容結構**：查無出處的數字、虛構人物、講稿照念投影片
+  - **英文用字**：套話與「not X, but Y」句型
+  - **中文用字**：賦能、助力、打造極致體驗等套話，以及「不是…而是…」對比腔
+  - **台灣在地化**：簡體字混入、大陸用語、全形標點
+
+  每一條都附上「改成怎麼做」。
+- **lint 直接把關**：新增 15 種警告，同時檢查畫面文字與每一拍的 `say` 講稿；示範簡報本身也已修到能通過 `--strict`。
+- **「文字口吻」納入視覺方向提案**：提案時要說明由誰來講、用什麼語氣、哪些詞絕對不說；審查最後還有 5 題人工檢查（替換、出處、講者、一眼、主張），補上 lint 判斷不了的部分。
+
+### v1.3 新增亮點
+
+- **做完要「看得到」**：新增 `snapshot.mjs`，把每一拍輸出成 PNG 並拼成附標籤的 `contact-sheet.png` 總覽圖；`--raw` 可單獨渲染主視覺頁面，讓「主視覺獨立檢查」與「觀眾視角審查」真的有圖可看，不再靠想像。
+- **懂設計的 lint**：`lint.mjs` 新增設計警告：卡片外殼（邊框盒過密）、卡片套卡片、emoji 當圖示、**文字互相重疊**、連續兩拍版型重複，以及骨架佔位場景未替換。`--strict` 讓警告直接判定失敗，`--json` 輸出給 agent 解析，刻意的例外可用 `data-lint-allow="<type>"` 標記。
+- **只含介面規範的骨架**：`new-deck.mjs` 產生不帶任何視覺風格、但已完整串好 `window.__beatdeck` v1.0（鏡頭、講者備忘、PiP 安全區、快捷鍵，以及會在 `?still` 自動定格的 `at`/`animate`/`draw`/`countUp`/`typewriter` 輔助函式）的簡報檔，力氣留給視覺世界，不必每次重寫介面規範。
+- **更穩健的 CLI**：Chromium 依序使用 `BEATDECK_CHROMIUM` → Playwright 內建版本 → 同一 Playwright 快取中的其他版本，版本不符時給清楚提示，不再直接失敗。
+- **更精簡的 `SKILL.md`**：主檔只留原則與分關卡的工作流程，細節移到 `references/`，並擴充觸發詞（含「簡報」「投影片」）。
+
 ### v1.2 新增亮點
 
 - **徹底禁用「預設 AI 卡片簡報外殼」與 5 種無卡片構圖原型**：明確禁止每頁都套用「頂部圓點小標＋全寬橫線＋四角裁切線＋邊框卡片網格」的套版外殼，改以 **5 種無卡片結構構圖**靈活切換——留白畫布＋單一主角、滿版場景／建築剖面、真實產品視窗＋細線標註、實體印刷跨頁／底片接觸表，以及無框大字非對稱排版。
@@ -36,7 +57,7 @@ npm install
 npx playwright install chromium
 ```
 
-> **提醒：** 請務必在每台要執行工具的電腦上於技能目錄內執行 `npm install && npx playwright install chromium`；切勿直接跨機複製 `node_modules/` 或漏裝套件，否則 CLI 工具將無法啟動 Chromium。
+> **提醒：** 請務必在每台要執行工具的電腦上於技能目錄內執行 `npm install && npx playwright install chromium`；切勿直接跨機複製 `node_modules/` 或漏裝套件，否則 CLI 工具將無法啟動 Chromium。若環境已內建 Chromium，可用 `BEATDECK_CHROMIUM=/path/to/chrome` 指定。
 
 ### 各工具安裝路徑
 
@@ -107,8 +128,15 @@ npx serve .
 從任意專案工作目錄執行時，請將 `<skill-dir>` 換成放置 `SKILL.md` 的資料夾路徑（需 Node.js >= 20）：
 
 ```bash
-# 1. 版面與介面規範檢查（零 console error、零破圖、零超框、零中英文意外斷行）
-node <skill-dir>/scripts/lint.mjs <path/to/deck.html>
+# 0. 產生已串好完整介面規範、不含視覺風格的簡報骨架
+node <skill-dir>/scripts/new-deck.mjs <path/to/deck.html> [--title "簡報標題"] [--lang zh-Hant] [--beats 6 | --ids a,b,c] [--force]
+
+# 1. 版面與介面規範檢查（零 console error、零破圖、零超框、零中英文意外斷行）＋設計警告
+node <skill-dir>/scripts/lint.mjs <path/to/deck.html> [--strict] [--json]
+
+# 1b. 輸出每拍 PNG 與總覽圖（加 --raw 則單獨渲染主視覺頁面）
+node <skill-dir>/scripts/snapshot.mjs <path/to/deck.html> [--beats 1,3-5] [--cols 4] [--bare] [--out dir]
+node <skill-dir>/scripts/snapshot.mjs <path/to/hero.html> --raw [--out dir]
 
 # 2. 從 BEATS 匯出含時間軸與講者統計的 Markdown 講稿（未指定 --out 時直接輸出至 stdout）
 node <skill-dir>/scripts/script-export.mjs <path/to/deck.html> [--out script.md] [--rate 3.6]
@@ -126,7 +154,9 @@ node <skill-dir>/scripts/record-video.mjs <path/to/deck.html> [--out deck.mp4] [
 在 `beatdeck` 目錄內直接用示範檔試跑：
 
 ```bash
-node ./scripts/lint.mjs examples/beatdeck-intro/deck.html
+node ./scripts/lint.mjs examples/beatdeck-intro/deck.html --strict
+node ./scripts/snapshot.mjs examples/beatdeck-intro/deck.html --out /tmp/beatdeck-snaps
+node ./scripts/new-deck.mjs /tmp/my-talk/deck.html --title "我的簡報" --lang zh-Hant --ids opening,shift,proof
 node ./scripts/script-export.mjs examples/beatdeck-intro/deck.html --out /tmp/beatdeck-script.md
 node ./scripts/pdf-export.mjs examples/beatdeck-intro/deck.html --mode storyboard --cols 2 --out /tmp/beatdeck-storyboard.pdf
 node ./scripts/bundle-share.mjs examples/beatdeck-intro/deck.html --out /tmp/beatdeck-share.html
@@ -138,9 +168,11 @@ node ./scripts/bundle-share.mjs examples/beatdeck-intro/deck.html --out /tmp/bea
 
 - `SKILL.md` — AI Agent Skill 核心指引與工作流程
 - `references/craft-and-direction.md` — 無卡片視覺構圖、主視覺精雕關卡、節拍敘事、字體斷行控制與三視角審查規範
+- `references/ai-tells.md` — 視覺與用字的 AI 痕跡清單（英文＋繁體中文）、改寫範例與人工檢查清單
 - `references/stage-contract.md` — `window.__beatdeck` v1.0 執行期介面規範
 - `references/export-and-recording.md` — CLI 參數細節與自訂 `--plan` 時間表格式
-- `scripts/` — Chromium 檢查器、講稿匯出、PDF 匯出、單檔打包與 60fps 錄影工具
+- `scripts/` — 骨架產生器、Chromium 檢查器、快照與總覽圖、講稿匯出、PDF 匯出、單檔打包與 60fps 錄影工具
+- `templates/skeleton.html` — `new-deck.mjs` 使用的無風格執行期骨架
 - `examples/beatdeck-intro/deck.html` — 符合 `window.__beatdeck` v1.0 介面規範的 12 拍示範簡報
 - `tests/e2e.test.mjs` — 端對端測試套件（`npm test`）
 

@@ -15,7 +15,21 @@ An open-source Agent Skill and headless Chromium toolkit for crafting film-like,
 | **Single Source of Truth** | Separate speaker doc & slides drift quickly | Video-only output; no live talk mode | One HTML drives Live Talk, Notes, Script, PDF, Share HTML & MP4 |
 | **Dependencies** | Office / browser SaaS | Node + bundler + React ecosystem | Plain HTML/CSS/JS + Playwright Chromium (`ffmpeg` optional for MP4) |
 
-### What's New in v1.2
+### What's New in v1.4: AI-Tell Guard
+
+- **A researched catalog of what makes decks look and sound machine-made**: [`references/ai-tells.md`](references/ai-tells.md) covers visual defaults (purple-blue gradients, frosted glass, emoji icons, text walls, Agenda/Thank-you slides), structure (unsourced stats, generic personas, narration that reads the slide), English stock phrasing and "not X, but Y" framing, and Traditional Chinese 套話 (賦能、助力、打造極致體驗…), 「不是…而是…」, plus Taiwan localization (簡體字, 大陸用語, 全形標點). Every entry pairs the tell with what to do instead.
+- **Lint enforces it**: 15 new warning types check visible stage text *and* every `say` line. The demo deck itself was cleaned up to pass `--strict`.
+- **Copy voice is part of the direction**: proposals now name who is speaking and which words they would never use, and review ends with a five-question human checklist (swap, source, speaker, glance, claim) for what no lint can judge.
+
+### What's New in v1.3
+
+- **See what you ship**: `snapshot.mjs` renders every beat to PNG plus a labelled `contact-sheet.png`, and `--raw` renders a standalone hero-asset page, so the Hero Gate and the Audience review are real visual checks instead of assumptions.
+- **Craft-aware lint**: `lint.mjs` now warns on the card shell (bordered-box density), card-inside-card, emoji icons, **overlapping text**, repeated layouts across consecutive beats, and leftover skeleton scenes. `--strict` makes warnings fatal, `--json` gives agents machine-readable results, and `data-lint-allow="<type>"` marks deliberate exceptions.
+- **Contract-only skeleton**: `new-deck.mjs` scaffolds a style-free deck with the full `window.__beatdeck` v1.0 runtime wired (camera, notes, PiP, keys, and `?still`-safe `at`/`animate`/`draw`/`countUp`/`typewriter` helpers), so the effort goes into the visual world rather than re-implementing the contract.
+- **Sturdier CLI**: Chromium resolves via `BEATDECK_CHROMIUM`, then Playwright's bundled browser, then another revision in the same Playwright cache, with clear errors instead of a hard failure on version drift.
+- **Leaner `SKILL.md`**: Principles + gated workflow up front, details in `references/`, and broader trigger phrases (incl. 簡報 / 投影片).
+
+### v1.2
 
 - **Card-Free Structural Archetypes**: Explicitly bans the repetitive "AI slide-card shell" (dot-kicker + header rule + corner crop marks + bordered grid boxes) in favor of **5 card-free composition archetypes**—clean hero canvases, full-bleed cross-sections, real product windows with hairline callouts, raw print spreads, and asymmetric typographic stages.
 - **Mandatory Hero Asset Craft Pass (Before Assembly)**: Separates asset craft from deck coding so visuals never degrade into crude boxes. Includes two explicit paths:
@@ -36,7 +50,7 @@ npm install
 npx playwright install chromium
 ```
 
-> **Note:** Always run `npm install && npx playwright install chromium` in the installed skill directory on each machine—do not copy `node_modules/` across machines or skip `npm install`, or CLI scripts will fail to launch Chromium.
+> **Note:** Always run `npm install && npx playwright install chromium` in the installed skill directory on each machine—do not copy `node_modules/` across machines or skip `npm install`, or CLI scripts will fail to launch Chromium. If a sandbox ships its own Chromium, point the tools at it with `BEATDECK_CHROMIUM=/path/to/chrome`.
 
 ### Agent Skill Paths
 
@@ -107,8 +121,15 @@ npx serve .
 Invoke tools from any workspace using `<skill-dir>` (the directory containing `SKILL.md`, with Node.js >= 20):
 
 ```bash
-# 1. Verify runtime contract, console errors, broken images, overflow, and line wraps
-node <skill-dir>/scripts/lint.mjs <path/to/deck.html>
+# 0. Scaffold a style-free deck with the full runtime contract wired
+node <skill-dir>/scripts/new-deck.mjs <path/to/deck.html> [--title "Deck Title"] [--lang en] [--beats 6 | --ids a,b,c] [--force]
+
+# 1. Verify runtime contract, console errors, broken images, overflow, line wraps + craft warnings
+node <skill-dir>/scripts/lint.mjs <path/to/deck.html> [--strict] [--json]
+
+# 1b. Render beat PNGs + contact sheet (or a standalone hero asset page with --raw)
+node <skill-dir>/scripts/snapshot.mjs <path/to/deck.html> [--beats 1,3-5] [--cols 4] [--bare] [--out dir]
+node <skill-dir>/scripts/snapshot.mjs <path/to/hero.html> --raw [--out dir]
 
 # 2. Export timestamped speaker script Markdown from BEATS (prints to stdout if --out omitted)
 node <skill-dir>/scripts/script-export.mjs <path/to/deck.html> [--out script.md] [--rate 3.6]
@@ -126,7 +147,9 @@ node <skill-dir>/scripts/record-video.mjs <path/to/deck.html> [--out deck.mp4] [
 Try them from the cloned `beatdeck` directory on the demo deck:
 
 ```bash
-node ./scripts/lint.mjs examples/beatdeck-intro/deck.html
+node ./scripts/lint.mjs examples/beatdeck-intro/deck.html --strict
+node ./scripts/snapshot.mjs examples/beatdeck-intro/deck.html --out /tmp/beatdeck-snaps
+node ./scripts/new-deck.mjs /tmp/my-talk/deck.html --title "My Talk" --ids opening,shift,proof
 node ./scripts/script-export.mjs examples/beatdeck-intro/deck.html --out /tmp/beatdeck-script.md
 node ./scripts/pdf-export.mjs examples/beatdeck-intro/deck.html --mode storyboard --cols 2 --out /tmp/beatdeck-storyboard.pdf
 node ./scripts/bundle-share.mjs examples/beatdeck-intro/deck.html --out /tmp/beatdeck-share.html
@@ -138,9 +161,11 @@ node ./scripts/bundle-share.mjs examples/beatdeck-intro/deck.html --out /tmp/bea
 
 - `SKILL.md` — Core Agent Skill instructions and ordered workflow
 - `references/craft-and-direction.md` — Card-free composition archetypes, hero asset craft pass, beat storytelling, typography & review gate
+- `references/ai-tells.md` — Visual and wording AI tells (English + 繁體中文), rewrite recipes, human checklist
 - `references/stage-contract.md` — Exact `window.__beatdeck` v1.0 runtime specification
 - `references/export-and-recording.md` — CLI documentation and custom `--plan` schema
-- `scripts/` — Headless Chromium linter, script exporter, PDF exporter, share bundler, and 60fps recorder
+- `scripts/` — Skeleton scaffolder, headless Chromium linter, snapshot/contact-sheet renderer, script exporter, PDF exporter, share bundler, and 60fps recorder
+- `templates/skeleton.html` — Style-free runtime skeleton used by `new-deck.mjs`
 - `examples/beatdeck-intro/deck.html` — Showcase presentation implementing `window.__beatdeck` v1.0
 - `tests/e2e.test.mjs` — End-to-end verification suite (`npm test`)
 

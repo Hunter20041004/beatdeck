@@ -1,0 +1,342 @@
+<!doctype html>
+<html lang="{{LANG}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{TITLE}}</title>
+<!--
+  Beatdeck runtime skeleton — window.__beatdeck v1.0
+  ---------------------------------------------------------------------------
+  This file is CONTRACT ONLY. It deliberately has no visual style.
+  Everything marked "DESIGN" is yours to replace with the chosen visual world
+  (palette, type pairing, hero assets, composition archetype, motion tier).
+  Everything marked "RUNTIME" implements the contract; change it only with care.
+  Placeholder scenes carry data-beatdeck-skeleton, and lint.mjs warns until
+  every one of them is replaced.
+-->
+<style>
+  /* ============ DESIGN: tokens (replace with the chosen world) ============ */
+  :root {
+    --ground: #e9e9e6;
+    --ink: #1c1c1c;
+    --muted: #6b6b6b;
+    --accent: #6b6b6b;
+    --font-display: Georgia, 'Noto Serif TC', 'Noto Serif CJK TC', serif;
+    --font-body: system-ui, 'Noto Sans TC', 'Noto Sans CJK TC', sans-serif;
+    --font-mono: ui-monospace, 'SFMono-Regular', Menlo, monospace;
+    --ease-cam: cubic-bezier(0.65, 0, 0.35, 1);
+  }
+
+  /* ============ RUNTIME: stage frame & modes (keep) ============ */
+  html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #000; }
+  #viewport { position: fixed; inset: 0; overflow: hidden; }
+  #stage {
+    position: absolute; left: 0; top: 0; width: 1920px; height: 1080px;
+    transform-origin: 0 0; overflow: hidden;
+    background: var(--ground); color: var(--ink); font-family: var(--font-body);
+  }
+  #world {
+    position: absolute; left: 0; top: 0; width: 1920px; height: 1080px;
+    transform-origin: 0 0; transition: transform 900ms var(--ease-cam);
+  }
+  .scene { position: absolute; inset: 0; opacity: 0; visibility: hidden; transition: opacity 420ms ease, visibility 0s linear 420ms; }
+  .scene.is-active { opacity: 1; visibility: visible; transition: opacity 420ms ease; }
+
+  #subtitle {
+    position: absolute; left: 50%; bottom: 56px; transform: translateX(-50%);
+    max-width: 1500px; padding: 12px 24px; display: none;
+    font: 500 34px/1.35 var(--font-body); color: #fff; background: rgba(0, 0, 0, 0.62); text-align: center;
+  }
+  #subtitle.is-visible { display: block; }
+  #camera-safe-zone {
+    position: absolute; right: 0; bottom: 0; width: 400px; height: 300px; display: none;
+    outline: 3px dashed rgba(220, 60, 40, 0.9); outline-offset: -3px; background: rgba(220, 60, 40, 0.12);
+    pointer-events: none; z-index: 50;
+  }
+  #camera-safe-zone.is-open { display: block; }
+
+  #hud {
+    position: fixed; left: 16px; bottom: 16px; display: flex; gap: 8px; align-items: center;
+    font: 12px/1 var(--font-mono); color: #ddd; background: rgba(0, 0, 0, 0.55); padding: 6px 10px;
+    opacity: 0.25; transition: opacity 200ms ease; z-index: 100;
+  }
+  #hud:hover { opacity: 1; }
+  #hud button { font: inherit; color: inherit; background: none; border: 1px solid #666; padding: 3px 7px; cursor: pointer; }
+  #hud button.is-on { background: #ddd; color: #111; }
+  #notes-drawer {
+    position: fixed; right: 0; top: 0; bottom: 0; width: 440px; padding: 28px; box-sizing: border-box;
+    background: #141414; color: #eee; font: 18px/1.5 var(--font-body);
+    transform: translateX(100%); transition: transform 240ms ease; z-index: 110; overflow: auto;
+  }
+  #notes-drawer.is-open { transform: none; }
+  #notes-drawer .nd-head { font: 12px/1.4 var(--font-mono); color: #aaa; letter-spacing: 0.06em; }
+  #notes-drawer .nd-say { margin: 16px 0; font-size: 22px; }
+  #notes-drawer .nd-cue { color: #f0c27a; }
+
+  body.still *, body.still *::before, body.still *::after { transition: none !important; animation: none !important; }
+  body.still #hud, body.still #notes-drawer, body.still #camera-safe-zone, body.still #subtitle,
+  body.video #hud, body.video #notes-drawer, body.video #camera-safe-zone,
+  body.bare #hud, body.bare #notes-drawer, body.bare #camera-safe-zone, body.bare #subtitle { display: none !important; }
+
+  /* ============ DESIGN: placeholder scene styles (delete) ============ */
+  [data-beatdeck-skeleton] .ph-title {
+    position: absolute; left: 140px; top: 380px; margin: 0;
+    font: 700 88px/1.05 var(--font-display); letter-spacing: -0.01em;
+  }
+  [data-beatdeck-skeleton] .ph-note {
+    position: absolute; left: 140px; top: 520px; margin: 0;
+    font: 400 26px/1.4 var(--font-mono); color: var(--muted);
+  }
+</style>
+</head>
+<body>
+<div id="viewport">
+  <div id="stage">
+    <div id="world">
+<!--BEATDECK:SCENES-->
+    </div>
+    <div id="subtitle" role="status" aria-live="polite"></div>
+    <div id="camera-safe-zone" aria-hidden="true"></div>
+  </div>
+</div>
+
+<aside id="notes-drawer" aria-label="Speaker notes">
+  <div class="nd-head" id="nd-head"></div>
+  <div class="nd-say" id="nd-say"></div>
+  <div class="nd-cue" id="nd-cue"></div>
+</aside>
+<nav id="hud" aria-label="Presentation controls">
+  <button type="button" id="btn-prev" aria-label="Previous beat">&larr;</button>
+  <span id="hud-counter">01 / 01</span>
+  <button type="button" id="btn-next" aria-label="Next beat">&rarr;</button>
+  <button type="button" id="btn-notes" title="Speaker notes (N)">N</button>
+  <button type="button" id="btn-cam" title="Camera safe zone (C)">C</button>
+  <button type="button" id="btn-fs" title="Fullscreen (F)">F</button>
+</nav>
+
+<script>
+(() => {
+  "use strict";
+
+  // ============ CONTENT: single source of truth ============
+  // lintAllow: narration-wide lint exemptions, e.g. ["contrast-frame"]; see references/ai-tells.md §7.
+  const META = { title: "{{TITLE}}", subtitle: "", lang: "{{LANG}}", width: 1920, height: 1080, speechRate: 3.6, lintAllow: [] };
+
+  // One idea + one visual change per beat. `cam` positions the #world camera (logical px + zoom).
+  const BEATS = [
+/*BEATDECK:BEATS*/
+  ];
+
+  // Intra-beat choreography keyed by beat id. Each receives (scene element, helpers).
+  // Every non-liveOnly step must settle synchronously under ?still (the helpers do this for you).
+  const CHOREO = {
+/*BEATDECK:CHOREO*/
+  };
+
+  // ============ RUNTIME (keep) ============
+  const params = new URLSearchParams(location.search);
+  const isStill = params.has("still");
+  const isVideo = params.has("video");
+  const isBare = params.has("bare");
+  const chromeHidden = isStill || isVideo || isBare;
+  if (isStill) document.body.classList.add("still");
+  if (isVideo) document.body.classList.add("video");
+  if (isBare) document.body.classList.add("bare");
+
+  const $ = (id) => document.getElementById(id);
+  const stage = $("stage");
+  const world = $("world");
+  const subtitleEl = $("subtitle");
+  const camZone = $("camera-safe-zone");
+  const notes = $("notes-drawer");
+  const scenes = BEATS.map((b) => world.querySelector(`[data-beat="${b.id}"]`));
+  let active = 0;
+  let notesOpen = false;
+  let camOpen = false;
+
+  let timers = [];
+  let rafs = [];
+  function clearTimeline() {
+    timers.forEach(clearTimeout);
+    rafs.forEach(cancelAnimationFrame);
+    timers = [];
+    rafs = [];
+  }
+
+  // at(ms, fn, { liveOnly }) — schedule a step inside the current beat.
+  function at(ms, fn, opts) {
+    const liveOnly = Boolean(opts && opts.liveOnly);
+    if (isStill) { if (!liveOnly) fn(); return; }
+    if (ms <= 0) { fn(); return; }
+    timers.push(setTimeout(fn, ms));
+  }
+
+  // animate(ms, onFrame(t∈[0,1]), { delay, liveOnly, ease }) — rAF tween, settles to t=1 under ?still.
+  function animate(ms, onFrame, opts = {}) {
+    const ease = opts.ease || ((t) => 1 - Math.pow(1 - t, 3));
+    at(opts.delay || 0, () => {
+      if (isStill) { onFrame(1); return; }
+      const start = performance.now();
+      const tick = (now) => {
+        const t = Math.min(1, (now - start) / ms);
+        onFrame(ease(t));
+        if (t < 1) rafs.push(requestAnimationFrame(tick));
+      };
+      rafs.push(requestAnimationFrame(tick));
+    }, opts);
+  }
+
+  // draw(svgPath, ms, { delay }) — stroke-dashoffset line drawing.
+  function draw(pathEl, ms, opts = {}) {
+    if (!pathEl) return;
+    const len = pathEl.getTotalLength ? pathEl.getTotalLength() : 1000;
+    pathEl.style.strokeDasharray = `${len}`;
+    pathEl.style.strokeDashoffset = `${len}`;
+    animate(ms, (t) => { pathEl.style.strokeDashoffset = `${len * (1 - t)}`; }, opts);
+  }
+
+  // countUp(el, to, ms, { from, decimals, prefix, suffix, delay }) — numeric roll-up.
+  function countUp(el, to, ms, opts = {}) {
+    if (!el) return;
+    const from = opts.from || 0;
+    const d = opts.decimals || 0;
+    const fmt = (v) => `${opts.prefix || ""}${v.toLocaleString(META.lang || undefined, { minimumFractionDigits: d, maximumFractionDigits: d })}${opts.suffix || ""}`;
+    el.textContent = fmt(from);
+    animate(ms, (t) => { el.textContent = fmt(from + (to - from) * t); }, opts);
+  }
+
+  // typewriter(el, text, ms, { delay }) — reveal text character by character.
+  function typewriter(el, text, ms, opts = {}) {
+    if (!el) return;
+    const chars = Array.from(text);
+    el.textContent = "";
+    animate(ms, (t) => { el.textContent = chars.slice(0, Math.round(chars.length * t)).join(""); }, { ...opts, ease: (t) => t });
+  }
+
+  const helpers = { at, animate, draw, countUp, typewriter, isStill, isVideo };
+
+  function estimateSeconds(b) {
+    if (typeof b.duration === "number" && b.duration > 0) return b.duration;
+    const say = (b.say || "").trim();
+    const cjk = (say.match(/[㐀-䶿一-鿿぀-ヿ]/g) || []).length;
+    const latin = (say.replace(/[㐀-䶿一-鿿぀-ヿ]/g, " ").match(/[A-Za-z0-9]+(?:[._'-][A-Za-z0-9]+)*/g) || []).length;
+    return Math.max(1.5, cjk / (META.speechRate || 3.6) + latin / 2.5);
+  }
+
+  function clampIndex(i) {
+    const n = Number.isFinite(i) ? Math.trunc(i) : 0;
+    return Math.max(0, Math.min(BEATS.length - 1, n));
+  }
+
+  // Fit the 1920x1080 stage into the visible viewport and centre it explicitly, so the result
+  // never depends on how a host page (iframe, artifact wrapper, preview pane) sizes <body>.
+  function fitStage() {
+    const vp = document.getElementById("viewport");
+    const vw = (vp && vp.clientWidth) || window.innerWidth || 1920;
+    const vh = (vp && vp.clientHeight) || window.innerHeight || 1080;
+    const s = Math.min(vw / 1920, vh / 1080);
+    stage.style.transform = `translate(${(vw - 1920 * s) / 2}px, ${(vh - 1080 * s) / 2}px) scale(${s})`;
+  }
+  if (window.ResizeObserver) new ResizeObserver(() => fitStage()).observe(document.getElementById("viewport"));
+
+  function setCamera(cam) {
+    const c = cam || { x: 0, y: 0, scale: 1 };
+    world.style.transform = `translate(${-c.x * c.scale}px, ${-c.y * c.scale}px) scale(${c.scale})`;
+  }
+
+  function renderBeat(index) {
+    clearTimeline();
+    active = clampIndex(index);
+    const beat = BEATS[active];
+    setCamera(beat.cam);
+    scenes.forEach((el, i) => el && el.classList.toggle("is-active", i === active));
+
+    const pad = (n) => String(n).padStart(2, "0");
+    $("hud-counter").textContent = `${pad(active + 1)} / ${pad(BEATS.length)}`;
+    $("nd-head").textContent = `BEAT ${pad(active + 1)} / ${pad(BEATS.length)} · ${beat.chapter || ""} · ${beat.speaker || ""} · ~${estimateSeconds(beat).toFixed(1)}s`;
+    $("nd-say").textContent = beat.say || "";
+    $("nd-cue").textContent = beat.note || "";
+
+    const choreo = CHOREO[beat.id];
+    if (typeof choreo === "function") choreo(scenes[active], helpers);
+    if (isStill) void world.offsetHeight;
+  }
+
+  function setSubtitle(text) {
+    const t = typeof text === "string" ? text.trim() : "";
+    subtitleEl.textContent = t;
+    subtitleEl.classList.toggle("is-visible", Boolean(t) && !isStill && !isBare);
+  }
+
+  function toggleNotes(force) {
+    notesOpen = typeof force === "boolean" ? force : !notesOpen;
+    notes.classList.toggle("is-open", notesOpen);
+    $("btn-notes").classList.toggle("is-on", notesOpen);
+  }
+  function toggleCam(force) {
+    camOpen = typeof force === "boolean" ? force : !camOpen;
+    camZone.classList.toggle("is-open", camOpen);
+    $("btn-cam").classList.toggle("is-on", camOpen);
+  }
+  function toggleFullscreen() {
+    if (!document.fullscreenElement) document.documentElement.requestFullscreen?.().catch(() => {});
+    else document.exitFullscreen?.().catch(() => {});
+  }
+
+  window.__beatdeck = {
+    version: "1.0",
+    meta: { ...META },
+    list: () => BEATS.map((b, index) => ({
+      index, id: b.id, chapter: b.chapter, speaker: b.speaker, say: b.say || "",
+      duration: b.duration, note: b.note, pdfSkip: Boolean(b.pdfSkip),
+    })),
+    current: () => active,
+    goTo: (i) => { renderBeat(i); return active; },
+    setSubtitle,
+  };
+
+  if (!chromeHidden) {
+    window.addEventListener("keydown", (e) => {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const t = e.target;
+      if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT" || t.isContentEditable)) return;
+      const k = e.key;
+      const act = {
+        ArrowRight: () => renderBeat(active + 1), " ": () => renderBeat(active + 1), PageDown: () => renderBeat(active + 1),
+        ArrowLeft: () => renderBeat(active - 1), PageUp: () => renderBeat(active - 1), Backspace: () => renderBeat(active - 1),
+        Home: () => renderBeat(0), End: () => renderBeat(BEATS.length - 1),
+        n: toggleNotes, N: toggleNotes, c: toggleCam, C: toggleCam, f: toggleFullscreen, F: toggleFullscreen,
+      }[k];
+      if (act) { e.preventDefault(); act(); }
+    });
+    $("viewport").addEventListener("click", (e) => {
+      if (e.target.closest("#hud") || e.target.closest("#notes-drawer")) return;
+      renderBeat(e.clientX < window.innerWidth * 0.25 ? active - 1 : active + 1);
+    });
+    $("btn-prev").addEventListener("click", () => renderBeat(active - 1));
+    $("btn-next").addEventListener("click", () => renderBeat(active + 1));
+    $("btn-notes").addEventListener("click", () => toggleNotes());
+    $("btn-cam").addEventListener("click", () => toggleCam());
+    $("btn-fs").addEventListener("click", toggleFullscreen);
+  }
+  window.addEventListener("resize", fitStage);
+
+  (async function init() {
+    fitStage();
+    const p = parseInt(params.get("p") || "1", 10);
+    const start = Number.isFinite(p) ? clampIndex(p - 1) : 0;
+    if (document.fonts && document.fonts.ready) {
+      await Promise.race([document.fonts.ready, new Promise((r) => setTimeout(r, 1500))]);
+    }
+    world.style.transition = "none";
+    renderBeat(start);
+    void world.offsetHeight;
+    requestAnimationFrame(() => {
+      if (!isStill) world.style.transition = "";
+      document.body.dataset.ready = "1";
+    });
+  })();
+})();
+</script>
+</body>
+</html>

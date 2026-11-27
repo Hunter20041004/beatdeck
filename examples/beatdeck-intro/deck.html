@@ -65,22 +65,20 @@
   #viewport {
     position: fixed;
     inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
     background: radial-gradient(circle at 50% 42%, #1B1F29 0%, #0D0F14 100%);
     overflow: hidden;
   }
 
   #stage {
-    position: relative;
+    position: absolute;
+    left: 0;
+    top: 0;
     width: 1920px;
     height: 1080px;
-    flex-shrink: 0;
     overflow: hidden;
     background: var(--ground);
     box-shadow: 0 32px 100px rgba(0, 0, 0, 0.62);
-    transform-origin: center center;
+    transform-origin: 0 0;
   }
 
   /* Continuous Risograph & Architectural Drafting Table World */
@@ -1072,8 +1070,8 @@
   /* Wireframe sits strictly at left: 810..1410, top: 240..670 — ZERO overlap with x>=1450, y>=710 */
   .b8-wireframe-area {
     position: absolute;
-    left: 800px;
-    top: 230px;
+    left: 900px;
+    top: 262px;
     width: 620px;
     height: 440px;
   }
@@ -1462,9 +1460,11 @@
   .b11-checks li {
     display: flex;
     align-items: flex-start;
-    gap: 14px;
-    font-size: 21px;
-    line-height: 1.45;
+    gap: 18px;
+    font-family: var(--font-serif);
+    font-size: 40px;
+    line-height: 1.22;
+    letter-spacing: -0.01em;
     color: var(--ink-soft);
     transition: color 260ms ease;
   }
@@ -1474,7 +1474,9 @@
 
   .b11-tick-svg {
     flex-shrink: 0;
-    margin-top: 4px;
+    width: 30px;
+    height: 30px;
+    margin-top: 10px;
   }
   .b11-tick-path {
     stroke-dasharray: 24;
@@ -1822,9 +1824,9 @@
             </svg>
             <span id="b1-clock-text">11<span class="clock-colon" id="b1-colon">:</span>39 PM</span>
           </div>
-          <h2 class="b1-headline" data-expected-lines="3">Forty slides.<br>Nobody reads<br>past <span class="c-vermilion">three.</span></h2>
+          <h2 class="b1-headline" data-expected-lines="3">Forty slides, and<br>nobody reads past<br>slide <span class="c-vermilion">three</span></h2>
           <p class="b1-deck-meta">
-            Midnight polish on <span style="font-family:var(--font-mono); font-size:21px; color:var(--ink);">Deck_Final_v9</span>—forty dense bullet sheets stacked for attention before click four.
+            Midnight polish on <span style="font-family:var(--font-mono); font-size:21px; color:var(--ink);">Deck_Final_v9</span>: forty dense bullet sheets stacked for attention before click four.
           </p>
         </div>
 
@@ -1843,7 +1845,7 @@
             </g>
 
             <!-- Tactile Vermilion Ink Stamp -->
-            <g class="b1-ink-stamp" id="b1-stamp">
+            <g class="b1-ink-stamp" id="b1-stamp" data-lint-allow="text-collision">
               <rect x="372" y="570" width="424" height="96" fill="#FFFFFF" stroke="#E0542B" stroke-width="3.5"/>
               <rect x="378" y="576" width="412" height="84" fill="url(#halftone-vermilion)" stroke="#E0542B" stroke-width="1"/>
               <text x="584" y="610" text-anchor="middle" font-family="monospace" font-size="22" font-weight="700" fill="#E0542B" letter-spacing="1.5">11:40 PM · 92.5% NOISE</text>
@@ -1860,7 +1862,7 @@
         <div class="b2-top">
           <div>
             <div class="folio-tag"><strong>02 / 12</strong> · THE SHIFT</div>
-            <h2 class="display" style="margin-top:14px;" data-expected-lines="2">Stop formatting slides.<br>Direct a <span class="c-vermilion">single stage.</span></h2>
+            <h2 class="display" style="margin-top:14px;" data-expected-lines="2">A talk reads better as<br>one <span class="c-vermilion">continuous stage</span></h2>
           </div>
           <div class="b2-legacy-strip" id="b2-legacy">
             <span class="b2-legacy-item">40 disconnected boxes</span>
@@ -2170,7 +2172,7 @@
               <span class="b5-out-idx">01</span>
               <div>
                 <div class="b5-out-title">Live Talk</div>
-                <div class="b5-out-sub">Keyboard + Click Stage</div>
+                <div class="b5-out-sub" data-lint-allow="internal-process">Keyboard + Click Stage</div>
               </div>
               <span class="b5-out-token c-vermilion">LIVE</span>
             </div>
@@ -2178,7 +2180,7 @@
               <span class="b5-out-idx">02</span>
               <div>
                 <div class="b5-out-title">Speaker Notes &amp; Script</div>
-                <div class="b5-out-sub">[N] Drawer + script-export.mjs</div>
+                <div class="b5-out-sub" data-lint-allow="internal-process">[N] Drawer + script-export.mjs</div>
               </div>
               <span class="b5-out-token c-cobalt">SCRIPT.MD</span>
             </div>
@@ -2186,7 +2188,7 @@
               <span class="b5-out-idx">03</span>
               <div>
                 <div class="b5-out-title">Storyboard &amp; Slides PDF</div>
-                <div class="b5-out-sub">pdf-export.mjs --mode</div>
+                <div class="b5-out-sub" data-lint-allow="internal-process">pdf-export.mjs --mode</div>
               </div>
               <span class="b5-out-token">PDF</span>
             </div>
@@ -2194,7 +2196,7 @@
               <span class="b5-out-idx">04</span>
               <div>
                 <div class="b5-out-title">Deterministic 60fps Video</div>
-                <div class="b5-out-sub">record-video.mjs --fps 60</div>
+                <div class="b5-out-sub" data-lint-allow="internal-process">record-video.mjs --fps 60</div>
               </div>
               <span class="b5-out-token c-sage">MP4</span>
             </div>
@@ -2209,7 +2211,7 @@
       <section class="scene" id="scene-5" data-beat="5">
         <div class="b6-head">
           <div class="folio-tag"><strong>06 / 12</strong> · CAMERA &amp; PACING</div>
-          <h2 class="display" style="margin-top:10px;" data-expected-lines="2">Move the lens.<br>Never <span class="c-vermilion">cut</span> the world.</h2>
+          <h2 class="display" style="margin-top:10px;" data-expected-lines="2">The camera pans and zooms<br>across <span class="c-vermilion">one canvas</span></h2>
         </div>
 
         <div class="b6-desk-wrap">
@@ -2290,7 +2292,7 @@
       <section class="scene" id="scene-6" data-beat="6">
         <div>
           <div class="folio-tag"><strong>07 / 12</strong> · TYPOGRAPHY &amp; LINT</div>
-          <h2 class="display" style="margin-top:12px;" data-expected-lines="2">Lock every line break.<br>Catch <span class="c-vermilion">overflow</span> automatically.</h2>
+          <h2 class="display" style="margin-top:12px;" data-expected-lines="2">Lint flags every <span class="c-vermilion">overflow</span><br>and stray line break</h2>
         </div>
 
         <div class="b7-browser">
@@ -2334,7 +2336,7 @@
             </div>
           </div>
 
-          <div class="b7-terminal-strip">
+          <div class="b7-terminal-strip" data-lint-allow="internal-process">
             <div class="b7-term-cell" id="b7-err-log">
               <span style="color:#FF8C6B;">ERR</span> [beat 07] scanning...
             </div>
@@ -2353,7 +2355,7 @@
       <section class="scene" id="scene-7" data-beat="7">
         <div class="b8-header">
           <div class="folio-tag"><strong>08 / 12</strong> · PRESENTER PIP</div>
-          <h2 class="display" style="margin-top:12px;" data-expected-lines="2">Reserve the corner.<br>Speak <span class="c-vermilion">inside</span> the frame.</h2>
+          <h2 class="display" style="margin-top:12px;" data-expected-lines="2">Press C to keep the<br>webcam corner <span class="c-vermilion">clear</span></h2>
         </div>
 
         <!-- Simulated Cursor strictly inside safe bounds -->
@@ -2414,23 +2416,23 @@
       <section class="scene" id="scene-8" data-beat="8">
         <div>
           <div class="folio-tag"><strong>09 / 12</strong> · EXPORT &amp; SHARE</div>
-          <h2 class="display" style="margin-top:12px;" data-expected-lines="2">Print the storyboard.<br>Ship <span class="c-vermilion">one offline</span> file.</h2>
+          <h2 class="display" style="margin-top:12px;" data-expected-lines="2">One file prints a storyboard<br>and ships <span class="c-vermilion">offline</span></h2>
         </div>
 
         <div class="b9-layout">
           <!-- Floating Overlapping Storyboard Contact Strips with Sprocket Holes -->
-          <div class="b9-contact-strip">
+          <div class="b9-contact-strip" data-lint-allow="card-shell text-density">
             <div class="b9-frame f1" id="b9-sb-1">
               <div class="b9-frame-inner">
                 <span style="font-family:var(--font-mono); font-size:14px; font-weight:700; color:var(--vermilion);">FRAME 01</span>
-                <span class="b9-frame-title">Forty slides.</span>
+                <span class="b9-frame-title">Forty slides</span>
               </div>
               <div class="b9-frame-cap">“It is 11:40 PM. Nobody will read past slide three.”</div>
             </div>
             <div class="b9-frame f2" id="b9-sb-2">
               <div class="b9-frame-inner">
                 <span style="font-family:var(--font-mono); font-size:14px; font-weight:700; color:var(--cobalt);">FRAME 02</span>
-                <span class="b9-frame-title">Direct a stage.</span>
+                <span class="b9-frame-title">One stage</span>
               </div>
               <div class="b9-frame-cap">“Advance the story one clear beat at a time.”</div>
             </div>
@@ -2453,7 +2455,7 @@
           <!-- Unboxed Single-File Share Manifest & Hairline Progress Rule -->
           <div class="b9-manifest-col">
             <div>
-              <div style="font-family:var(--font-mono); font-size:15px; font-weight:700; color:var(--cobalt);">?still&amp;bare → bundle-share.mjs</div>
+              <div data-lint-allow="internal-process" style="font-family:var(--font-mono); font-size:15px; font-weight:700; color:var(--cobalt);">?still&amp;bare → bundle-share.mjs</div>
               <h3 style="font-family:var(--font-serif); font-size:44px; margin-top:6px;">deck-share.html</h3>
             </div>
 
@@ -2472,7 +2474,7 @@
               <div class="b9-progress-track">
                 <div class="b9-progress-fill" id="b9-bar"></div>
               </div>
-              <div style="font-family:var(--font-mono); font-size:16px; color:var(--ink-soft); margin-top:16px;">
+              <div data-lint-allow="internal-process" style="font-family:var(--font-mono); font-size:16px; color:var(--ink-soft); margin-top:16px;">
                 $ node scripts/bundle-share.mjs deck.html
               </div>
             </div>
@@ -2486,7 +2488,7 @@
       <section class="scene" id="scene-9" data-beat="9">
         <div>
           <div class="folio-tag"><strong>10 / 12</strong> · 60FPS VIDEO</div>
-          <h2 class="display" style="margin-top:12px;" data-expected-lines="2">Slow down time.<br>Export <span class="c-vermilion">rock-steady</span> 60fps.</h2>
+          <h2 class="display" style="margin-top:12px;" data-expected-lines="2">A slowed clock keeps<br>video at <span class="c-vermilion">60fps</span></h2>
         </div>
 
         <div class="b10-gate-lab">
@@ -2548,7 +2550,7 @@
       <section class="scene" id="scene-10" data-beat="10">
         <div>
           <div class="folio-tag"><strong>11 / 12</strong> · QUALITY GATE</div>
-          <h2 class="display" style="margin-top:12px;" data-expected-lines="2">Three lenses.<br>Zero <span class="c-vermilion">broken</span> frames.</h2>
+          <h2 class="display" style="margin-top:12px;" data-expected-lines="2">Three checks run<br>before <span class="c-vermilion">every</span> delivery</h2>
         </div>
 
         <div class="b11-stage">
@@ -2562,15 +2564,7 @@
                 <ul class="b11-checks">
                   <li>
                     <svg class="b11-tick-svg" width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="8.5" stroke="#1F6E50" stroke-width="1.5"/><path class="b11-tick-path" d="M6 10.2 L8.8 13 L14.5 7.2" stroke="#1F6E50" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                    <span>Step through ?still&amp;p=1..N cold without notes</span>
-                  </li>
-                  <li>
-                    <svg class="b11-tick-svg" width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="8.5" stroke="#1F6E50" stroke-width="1.5"/><path class="b11-tick-path" d="M6 10.2 L8.8 13 L14.5 7.2" stroke="#1F6E50" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                    <span>One clear visual transformation per beat</span>
-                  </li>
-                  <li>
-                    <svg class="b11-tick-svg" width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="8.5" stroke="#1F6E50" stroke-width="1.5"/><path class="b11-tick-path" d="M6 10.2 L8.8 13 L14.5 7.2" stroke="#1F6E50" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                    <span>No unexplained internal jargon on stage</span>
+                    <span>Cold read: does every frame land without notes?</span>
                   </li>
                 </ul>
               </div>
@@ -2585,15 +2579,7 @@
                 <ul class="b11-checks">
                   <li>
                     <svg class="b11-tick-svg" width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="8.5" stroke="#1F6E50" stroke-width="1.5"/><path class="b11-tick-path" d="M6 10.2 L8.8 13 L14.5 7.2" stroke="#1F6E50" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                    <span>Read exported say lines aloud at natural pace</span>
-                  </li>
-                  <li>
-                    <svg class="b11-tick-svg" width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="8.5" stroke="#1F6E50" stroke-width="1.5"/><path class="b11-tick-path" d="M6 10.2 L8.8 13 L14.5 7.2" stroke="#1F6E50" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                    <span>Verify [C] safe-zone clear before recording</span>
-                  </li>
-                  <li>
-                    <svg class="b11-tick-svg" width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="8.5" stroke="#1F6E50" stroke-width="1.5"/><path class="b11-tick-path" d="M6 10.2 L8.8 13 L14.5 7.2" stroke="#1F6E50" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                    <span>Confirm [N] notes cues match live timing</span>
+                    <span>Read each line aloud; keep the camera corner clear.</span>
                   </li>
                 </ul>
               </div>
@@ -2608,15 +2594,7 @@
                 <ul class="b11-checks">
                   <li>
                     <svg class="b11-tick-svg" width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="8.5" stroke="#1F6E50" stroke-width="1.5"/><path class="b11-tick-path" d="M6 10.2 L8.8 13 L14.5 7.2" stroke="#1F6E50" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                    <span>Every metric traced to a verified source</span>
-                  </li>
-                  <li>
-                    <svg class="b11-tick-svg" width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="8.5" stroke="#1F6E50" stroke-width="1.5"/><path class="b11-tick-path" d="M6 10.2 L8.8 13 L14.5 7.2" stroke="#1F6E50" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                    <span>Zero 1920×1080 overflow or broken images</span>
-                  </li>
-                  <li>
-                    <svg class="b11-tick-svg" width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="8.5" stroke="#1F6E50" stroke-width="1.5"/><path class="b11-tick-path" d="M6 10.2 L8.8 13 L14.5 7.2" stroke="#1F6E50" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                    <span>Zero unexpected CJK or Latin line wraps</span>
+                    <span>Every number sourced, and lint passes clean.</span>
                   </li>
                 </ul>
               </div>
@@ -2634,8 +2612,8 @@
           <div>
             <div class="folio-tag is-vermilion"><strong>12 / 12</strong> · START DIRECTING</div>
             <h2 class="b12-headline" data-expected-lines="2">
-              <span class="mask-line" id="b12-m1"><span class="mask-inner">Stop formatting slides.</span></span>
-              <span class="mask-line" id="b12-m2"><span class="mask-inner">Start <span class="c-vermilion">directing beats.</span></span></span>
+              <span class="mask-line" id="b12-m1"><span class="mask-inner">Install Beatdeck and</span></span>
+              <span class="mask-line" id="b12-m2"><span class="mask-inner"><span class="c-vermilion">direct</span> your next talk</span></span>
             </h2>
             <p class="lead b12-lead" id="b12-lead">
               Install Beatdeck as an Agent Skill and export live decks, PDF storyboards, and 60fps video from one self-contained HTML file.
@@ -2651,7 +2629,7 @@
           </svg>
         </div>
 
-        <div class="b12-cmd-bar" id="b12-cli">
+        <div class="b12-cmd-bar" id="b12-cli" data-lint-allow="internal-process">
           <div class="b12-cmd-line"><span class="b12-prompt">$</span><span id="b12-cmd-0"></span></div>
           <div class="b12-cmd-line"><span class="b12-prompt">$</span><span id="b12-cmd-1"></span></div>
           <div class="b12-cmd-line"><span class="b12-prompt">$</span><span id="b12-cmd-2"></span></div>
@@ -2740,7 +2718,7 @@
       id: "invent-the-world",
       chapter: "04 · Visual World",
       speaker: "Narrator",
-      say: "Every topic earns its own visual metaphor—a map, a gallery wall, or a timeline—never a recycled slide template.",
+      say: "Every topic earns its own visual metaphor: a map, a gallery wall, or a timeline drawn for that subject alone.",
       duration: 7.5,
       note: "Cue: Three unboxed specimens animate sequentially along the hairline strip.",
       pdfSkip: false,
@@ -2770,7 +2748,7 @@
       id: "bilingual-lint",
       chapter: "07 · Typography & Lint",
       speaker: "Narrator",
-      say: "Traditional Chinese and English share the same stage—explicit breaks and Chromium line-wrap linting catch orphan characters before you present.",
+      say: "Traditional Chinese and English share the same stage. Explicit breaks and Chromium line-wrap linting catch orphan characters before you present.",
       duration: 8.0,
       note: "Cue: Measure narrows so orphan character drops with hairline leader before <br> lock passes.",
       pdfSkip: false,
@@ -2820,7 +2798,7 @@
       id: "closing-cta",
       chapter: "12 · Start Directing",
       speaker: "Narrator",
-      say: "Stop formatting slides and start directing beats. Install Beatdeck and let your next presentation direct itself.",
+      say: "Install Beatdeck, point it at your notes, and direct your next presentation one beat at a time.",
       duration: 7.0,
       note: "Cue: Monumental headline mask reveals above the sharp black command bar.",
       pdfSkip: false,
@@ -3436,10 +3414,11 @@
   }
 
   function fitStage() {
-    const vw = window.innerWidth || 1920;
-    const vh = window.innerHeight || 1080;
+    const vp = document.getElementById("viewport");
+    const vw = (vp && vp.clientWidth) || window.innerWidth || 1920;
+    const vh = (vp && vp.clientHeight) || window.innerHeight || 1080;
     const scale = Math.min(vw / META.width, vh / META.height);
-    stage.style.transform = `scale(${scale})`;
+    stage.style.transform = `translate(${(vw - META.width * scale) / 2}px, ${(vh - META.height * scale) / 2}px) scale(${scale})`;
   }
 
   function renderBeat(idx) {
@@ -3580,6 +3559,7 @@
   }
 
   window.addEventListener("resize", fitStage);
+  if (window.ResizeObserver) new ResizeObserver(() => fitStage()).observe(document.getElementById("viewport"));
 
   async function init() {
     fitStage();

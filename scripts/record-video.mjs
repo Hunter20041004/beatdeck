@@ -4,12 +4,11 @@ import path from 'node:path';
 import { execFileSync, spawnSync } from 'node:child_process';
 import {
   estimateBeatSeconds,
-  getBrowserExecutablePath,
+  launchBrowser,
   parseCliArgs,
   resolveDeckUrl,
   waitForDeckReady,
 } from './lib/browser.mjs';
-import { chromium } from 'playwright';
 
 function printUsage() {
   console.error(
@@ -224,12 +223,6 @@ async function main() {
     rawPlan = JSON.parse(fs.readFileSync(planPath, 'utf8'));
   }
 
-  const executablePath = getBrowserExecutablePath();
-  if (!fs.existsSync(executablePath)) {
-    throw new Error(
-      `Playwright bundled Chromium not found at ${executablePath}. Run: npx playwright install chromium`
-    );
-  }
 
   let workDir = null;
   let browser = null;
@@ -252,7 +245,7 @@ async function main() {
       fs.mkdirSync(path.dirname(outPath), { recursive: true });
     }
 
-    browser = await chromium.launch({ headless: true });
+    browser = await launchBrowser();
     context = await browser.newContext({
       viewport: { width: 1920, height: 1080 },
       deviceScaleFactor: 1,
