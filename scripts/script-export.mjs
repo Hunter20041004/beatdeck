@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { estimateBeatSeconds, parseCliArgs, resolveDeckUrl, withPage } from './lib/browser.mjs';
+import { normalizeSpine, sectionTimes } from './lib/spine.mjs';
 
 function printUsage() {
   console.error('Usage: node scripts/script-export.mjs <deck.html> [--out script.md] [--rate <num>]');
@@ -96,6 +97,24 @@ async function main() {
   lines.push(`- **Estimated Duration**: ${formatStart(totalSec)} (${totalSec.toFixed(1)}s)`);
   lines.push(`- **Speech Rate**: ${rate} CJK chars/s, 2.5 Latin words/s`);
   lines.push('');
+  // The confirmed structure (craft-and-direction §0.3), so the speaker rehearses the argument, not only the lines.
+  const spine = normalizeSpine(meta.spine);
+  if (spine && spine.sections.length) {
+    lines.push('## Story Spine');
+    lines.push('');
+    if (spine.promise) lines.push(`- **Promise**: ${escapeCell(spine.promise)}`);
+    if (spine.protagonist) lines.push(`- **Protagonist**: ${escapeCell(spine.protagonist)}`);
+    if (spine.shape) lines.push(`- **Shape**: ${escapeCell(spine.shape)}`);
+    if (spine.from || spine.to) lines.push(`- **From → to**: ${escapeCell(spine.from || '?')} → ${escapeCell(spine.to || '?')}`);
+    lines.push('');
+    lines.push('| Section | Follows because | Claim | Beats | Time | Share |');
+    lines.push('| --- | --- | --- | ---: | ---: | ---: |');
+    for (const r of sectionTimes(spine, beats, (b) => estimateBeatSeconds(b, rate))) {
+      const pct = totalSec > 0 ? ((r.sec / totalSec) * 100).toFixed(0) : '0';
+      lines.push(`| ${escapeCell(r.chapter || '-')} | ${escapeCell(r.why || '-')} | ${escapeCell(r.claim || '-')} | ${r.beats} | ${formatStart(r.sec)} | ${pct}% |`);
+    }
+    lines.push('');
+  }
   lines.push('## Speaker Breakdown');
   lines.push('');
   lines.push('| Speaker | Beats | Seconds | Share |');

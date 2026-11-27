@@ -50,6 +50,11 @@ interface BeatdeckAPI {
     width: 1920;
     height: 1080;
     speechRate?: number; // default: 3.6 chars/s (CJK), 2.5 words/s (Latin)
+    lintAllow?: string[];
+    spine?: {           // the confirmed structure (craft-and-direction §0.3); read by lint and script-export
+      promise: string; protagonist?: string; shape?: string; from?: string; to: string;
+      sections: Array<{ chapter: string; claim: string; why: string }>; // each beat's chapter is one of these
+    };
   };
   list(): Array<{
     index: number;      // 0-based
