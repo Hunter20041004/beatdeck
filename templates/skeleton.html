@@ -155,19 +155,21 @@
     // fades in, so two layouts never overlap). Spend anything louder on the one or two moments the story
     // turns (see references/craft-and-direction.md §2).
     transition: { type: "dip", ms: 720 },
-    // Bridges: this deck's own beat changes, designed from its visual signature (craft-and-direction §2.7).
-    // Name one here and use it as a type: `transition: "spine"` or { type: "spine", ms: 900 }. Use it where a
-    // chapter starts; inside a chapter keep dip, cut or match. The function plays the change and returns the
+    // Bridges: this deck's own beat changes, designed from its world and its protagonist (craft-and-direction §2.7).
+    // Build two to four, each for a story relation the deck has (time passes, the protagonist acts, a new
+    // chapter, a closer look); never play the same one twice in a row. Use one by name:
+    // `transition: "spine"` or { type: "spine", ms: 900 }. Each function plays the change and returns the
     // Animation that ends it. ctx = { from, to, layer, ms, ease, reverse, dir, origin, run, W, H }:
     //   layer: an empty full-stage <div> above both scenes for drawing the motif (removed when the change ends)
     //   run(el, keyframes, opts?): el.animate with the change's timing; cancelled if the viewer clicks on.
-    // Example: the deck's period spine sweeps across the stage and the new chapter is revealed behind it.
+    // Example ("time passes" in a timetable deck): a now-line sweeps across; the next beat is
+    // already behind it and the old one only ahead of it, so the two never overlap.
     //   spine: ({ from, to, layer, run, reverse }) => {
     //     const bar = document.createElement("div");
     //     bar.style.cssText = "position:absolute;top:0;bottom:0;width:14px;background:var(--accent)";
     //     layer.append(bar);
     //     run(bar, { left: reverse ? ["1920px", "-14px"] : ["-14px", "1920px"] });
-    //     run(from, { opacity: [1, 0.2] });
+    //     run(from, { clipPath: ["inset(0 0 0 0)", reverse ? "inset(0 100% 0 0)" : "inset(0 0 0 100%)"] });
     //     return run(to, { clipPath: [reverse ? "inset(0 0 0 100%)" : "inset(0 100% 0 0)", "inset(0 0 0 0)"] });
     //   },
     bridges: {},

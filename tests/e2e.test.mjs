@@ -927,6 +927,43 @@ async function runTests() {
     }
     console.log('   v1.8 checks passed.');
 
+    // 16) v1.9: protagonist, transition-repeat, frame-crossing
+    console.log('16) Checking v1.9 protagonist, transition-repeat and frame-crossing...');
+    const v19 = (name, { scenes = {}, choreo = '', beats = {}, bridges = '' }) => {
+      const file = path.join(tmpDir, 'v19', name, 'deck.html');
+      assert.equal(runNode('scripts/new-deck.mjs', [file, '--ids', 'a,b,c,d,e,f', '--lang', 'zh-Hant']).status, 0);
+      let src = fs.readFileSync(file, 'utf8');
+      for (const [id, html] of Object.entries(scenes)) src = src.replace(new RegExp(`(<section class="scene" data-beat="${id}"[^>]*>)`), `$1${html}`);
+      for (const [id, extra] of Object.entries(beats)) src = src.replace(`{ id: "${id}",`, `{ id: "${id}", ${extra}`);
+      if (choreo) src = src.replace(/\/\/ "a": \(scene[\s\S]*?\/\/ \},/, choreo);
+      if (bridges) src = src.replace('    bridges: {},', `    bridges: { ${bridges} },`);
+      fs.writeFileSync(file, src, 'utf8');
+      return JSON.parse(runNode('scripts/lint.mjs', [file, '--json']).stdout).warnings;
+    };
+    const hero = '<div data-protagonist style="position:absolute;left:1500px;top:700px;width:160px;height:160px;border-radius:50%;background:#6f86b4"></div>';
+    let w = v19('no-hero', {});
+    assert.ok(w.some((x) => x.type === 'protagonist' && /data-protagonist/.test(x.message)), 'a deck with no marked protagonist must be asked for one');
+    w = v19('late-hero', { scenes: { e: hero } });
+    assert.ok(w.some((x) => x.type === 'protagonist' && /beat 5/.test(x.message)), 'a protagonist first seen on beat 5 must be flagged');
+    w = v19('good-hero', { scenes: { a: hero, b: hero, d: hero } });
+    assert.ok(!w.some((x) => x.type === 'protagonist'), `a protagonist met early and often must pass (${JSON.stringify(w.filter((x) => x.type === 'protagonist'))})`);
+
+    const sweep = 'sweep: ({ to, run }) => run(to, { clipPath: ["inset(0 100% 0 0)", "inset(0 0 0 0)"] }),';
+    w = v19('repeat', { bridges: sweep, beats: { b: 'transition: "sweep",', c: 'transition: "sweep",', d: 'transition: "sweep",', e: 'transition: "sweep",', f: 'transition: "sweep",' } });
+    assert.ok(w.some((x) => x.type === 'transition-repeat'), 'one bridge on every change must be flagged');
+    w = v19('varied', { bridges: sweep + ' lift: ({ to, run }) => run(to, { clipPath: ["inset(100% 0 0 0)", "inset(0 0 0 0)"] }),', beats: { b: 'transition: "sweep",', d: 'transition: "lift",', f: 'transition: "sweep",' } });
+    assert.ok(!w.some((x) => x.type === 'transition-repeat'), `a varied vocabulary must pass (${JSON.stringify(w.filter((x) => x.type === 'transition-repeat'))})`);
+
+    const phone = (inner) => `<div class="phone" style="position:absolute;left:900px;top:200px;width:360px;height:640px;border:14px solid #222;border-radius:48px;overflow:hidden;background:#fff">${inner}</div>`;
+    const card = '<div class="flyer" style="position:absolute;left:300px;top:400px;width:240px;height:120px;background:#c4524d"></div>';
+    const fly = '"b": (scene, { tween }) => { tween(scene.querySelector(".flyer"), { transform: ["translateX(0px)", "translateX(820px)"] }, { ms: 4000, ease: "linear" }); },';
+    w = v19('crossing', { scenes: { b: phone('') + card }, choreo: fly });
+    assert.ok(w.some((x) => x.type === 'frame-crossing' && x.beat === 'beat 2'), `a card flying over a phone bezel must be flagged (${JSON.stringify(w.map((x) => x.type))})`);
+    const inside = '<div class="flyer" style="position:absolute;left:-500px;top:200px;width:240px;height:120px;background:#c4524d"></div>';
+    w = v19('clipped', { scenes: { b: phone(inside) }, choreo: fly.replace('820px', '560px') });
+    assert.ok(!w.some((x) => x.type === 'frame-crossing'), `a card entering through the screen (clipped by it) must pass (${JSON.stringify(w.filter((x) => x.type === 'frame-crossing'))})`);
+    console.log('   v1.9 checks passed.');
+
     console.log('ALL E2E TESTS PASSED');
   } finally {
     fs.rmSync(tmpDir, { recursive: true, force: true });

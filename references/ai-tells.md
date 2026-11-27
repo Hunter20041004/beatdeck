@@ -162,12 +162,13 @@ The pattern behind every rewrite: **a concrete scene, a real number, or a decisi
 
 Run this on the contact sheet (`snapshot.mjs`), the motion filmstrip (`filmstrip.mjs`) and the exported script (`script-export.mjs`):
 
+0. **Cover test:** hide the protagonist (craft-and-direction §0) in every beat. If the deck still makes sense, it is a feature tour around the subject, not a story about it.
 1. **Swap test:** replace the product or topic name with a competitor's. If the deck still works, it says nothing specific. Rewrite until it breaks.
 2. **Source test:** point at every number. Can you name where it came from? If not, remove it or mark it `[missing]` and ask.
 3. **Speaker test:** read every `say` aloud. Would *this* speaker say it, in this room? Cut any sentence that sounds like a press release.
 4. **Glance test:** look at the contact sheet for five seconds. Do beats share one visual system *and* differ in composition? Any beat that looks like a template default?
 5. **Claim test:** read only the headlines in order. Do they tell the story as claims, without the body text?
-6. **Motion test:** read `filmstrip.png` row by row. Does each motion help the audience read the beat in the right order, and would the beat be worse without it? Are there two or three moments where the content itself moves, and are they where the story turns? Does a new chapter arrive through the deck's own bridge, or does every click just fade?
+6. **Motion test:** read `filmstrip.png` row by row. Does each motion help the audience read the beat in the right order, and would the beat be worse without it? Are there two or three moments where the content itself moves, and are they where the story turns? Does each beat change say how the two beats relate, without one effect repeating into a pattern? Does anything pass through a phone's bezel, a page's edge or another object mid-motion?
 7. **Need-to-know test:** for every fact on stage, ask whether this audience would understand or act differently without it. Revision history, review rounds, tooling, and submission notes almost never pass.
 
 ---

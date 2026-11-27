@@ -687,6 +687,52 @@ async function checkMotion(browser, input, total, allow) {
     await page.evaluate((r) => window.__bdSetClockRate(r), speed);
     await cdp.send('Animation.setPlaybackRate', { playbackRate: speed });
     const transitions = [];
+    const crossings = new Map(); // beat index -> Set of "moving element ⟂ frame" labels
+    const protagonistBeats = [];
+    let protagonistMarked = false;
+    // Mid-motion geometry: a moving element that sits on top of a container's frame ([data-frame]: a phone,
+    // a page, a tray) without being inside it reads as passing through the object. Final frames never show it.
+    const sampleCrossings = () => page.evaluate(() => {
+      const label = (el) => (el.id ? `#${el.id}` : '') + (el.classList.length ? `.${[...el.classList].slice(0, 2).join('.')}` : '') || el.tagName.toLowerCase();
+      const allowed = (el, type) => Boolean(el.closest(`[data-lint-allow~="${type}"]`));
+      // A scene on its way out during a beat change is not part of the new beat's physical space.
+      const visible = (el) => !el.closest('.is-leaving') && (el.checkVisibility ? el.checkVisibility({ opacityProperty: true, visibilityProperty: true }) : true);
+      // Containers: anything marked data-frame, plus anything drawn with a bezel (a border of 6px or more).
+      const bezel = (el) => {
+        const cs = getComputedStyle(el);
+        const w = Math.max(...['Top', 'Right', 'Bottom', 'Left'].map((k) => (cs[`border${k}Style`] === 'none' ? 0 : parseFloat(cs[`border${k}Width`]) || 0)));
+        const r = el.getBoundingClientRect();
+        return w >= 6 && r.width >= 120 && r.height >= 120;
+      };
+      const stage = document.getElementById('stage') || document.body;
+      const frames = [...stage.querySelectorAll('*')].filter((el) => (el.hasAttribute('data-frame') || bezel(el)) && visible(el));
+      if (!frames.length) return [];
+      const movers = new Set();
+      for (const a of document.getAnimations()) {
+        if (a.id === 'bd-change' || a.playState !== 'running' || !a.effect || !a.effect.target) continue;
+        if (a.effect.target instanceof Element) movers.add(a.effect.target);
+      }
+      const out = [];
+      for (const m of movers) {
+        if (!visible(m) || allowed(m, 'frame-crossing')) continue;
+        const r = m.getBoundingClientRect();
+        if (r.width < 4 || r.height < 4) continue;
+        for (const f of frames) {
+          if (f === m || f.contains(m) || m.contains(f) || allowed(f, 'frame-crossing')) continue;
+          const q = f.getBoundingClientRect();
+          const x0 = Math.max(r.left, q.left), x1 = Math.min(r.right, q.right);
+          const y0 = Math.max(r.top, q.top), y1 = Math.min(r.bottom, q.bottom);
+          if (x1 - x0 < 3 || y1 - y0 < 3) continue; // apart
+          const inside = r.left >= q.left - 1 && r.right <= q.right + 1 && r.top >= q.top - 1 && r.bottom <= q.bottom + 1;
+          // Only a mover that straddles the frame's edge and is drawn above it passes "through" the object.
+          if (inside) continue;
+          const probes = [[(x0 + x1) / 2, (y0 + y1) / 2], [x0 + 2, y0 + 2], [x1 - 2, y1 - 2]];
+          const onTop = probes.some(([x, y]) => { const hit = document.elementFromPoint(x, y); return hit && (hit === m || m.contains(hit)); });
+          if (onTop) out.push(`${label(m)} over ${label(f)}`);
+        }
+      }
+      return out;
+    });
     for (let i = 0; i < total; i += 1) {
       transitions.push(
         await page.evaluate((idx) => {
@@ -695,7 +741,24 @@ async function checkMotion(browser, input, total, allow) {
           return document.body.dataset.beatTransition;
         }, i)
       );
-      await page.waitForTimeout(340);
+      for (const wait of [40, 60, 90, 150]) {
+        await page.waitForTimeout(wait);
+        for (const c of await sampleCrossings()) {
+          if (!crossings.has(i)) crossings.set(i, new Set());
+          crossings.get(i).add(c);
+        }
+      }
+      const p = await page.evaluate(() => {
+        const marked = [...document.querySelectorAll('[data-protagonist]')];
+        const seen = marked.some((el) => {
+          const r = el.getBoundingClientRect();
+          const ok = el.checkVisibility ? el.checkVisibility({ opacityProperty: true, visibilityProperty: true }) : true;
+          return ok && r.width > 8 && r.height > 8 && r.right > 0 && r.bottom > 0 && r.left < innerWidth && r.top < innerHeight;
+        });
+        return { marked: marked.length > 0, seen };
+      });
+      if (p.marked) protagonistMarked = true;
+      if (p.seen) protagonistBeats.push(i);
     }
     // Bridges are the deck's own designed changes (MOTION.bridges); they are not stock showy effects.
     const bridges = new Set(await page.evaluate(() => (window.__beatdeck && window.__beatdeck.bridges) || []));
@@ -761,6 +824,51 @@ async function checkMotion(browser, input, total, allow) {
         type: 'transition-variety',
         message: `${loudChanges.length} of ${changes.length} beat changes are showy (${loudFamilies.join(', ')}); keep most changes to fade, cut, match or camera, and give at most two story turns a distinct change`,
       });
+    }
+
+    if (!skip('frame-crossing')) {
+      for (const [i, set] of crossings) {
+        warnings.push({
+          beat: `beat ${i + 1}`,
+          type: 'frame-crossing',
+          message: `mid-motion, a moving element is drawn across a container's frame (${[...set].slice(0, 3).join('; ')}); things that enter a phone, page or tray should be clipped by its opening (put the destination inside it with overflow: hidden) or pass under its frame (craft-and-direction §2.8)`,
+        });
+      }
+    }
+
+    // The heart of the deck (craft-and-direction §0): one protagonist, marked with data-protagonist,
+    // that the audience meets early and keeps meeting.
+    if (total >= 6) {
+      if (!protagonistMarked) {
+        if (!skip('protagonist')) warnings.push({ beat: 'deck', type: 'protagonist', message: 'no element is marked data-protagonist; name the subject\'s protagonist (the character, mechanism or finding its promise depends on) and mark where it appears (craft-and-direction §0)' });
+      } else {
+        const first = protagonistBeats.length ? protagonistBeats[0] : -1;
+        const need = Math.ceil(total / 3);
+        if (!skip('protagonist') && (first < 0 || first > 2 || protagonistBeats.length < need)) {
+          warnings.push({
+            beat: 'deck',
+            type: 'protagonist',
+            message: first < 0 ? 'the data-protagonist element never shows on stage' : `the protagonist first shows on beat ${first + 1} and in ${protagonistBeats.length} of ${total} beats; meet it within the first three beats and keep it in at least ${need}, so the deck is about it rather than a tour around it`,
+          });
+        }
+      }
+    }
+
+    // Designed changes repeat into a pattern quickly: the same bridge back to back, or on most changes.
+    const visibleChanges = changes.filter((t) => t !== 'cut');
+    if (!skip('transition-repeat')) {
+      const counts = new Map();
+      visibleChanges.forEach((t) => { if (bridges.has(t)) counts.set(t, (counts.get(t) || 0) + 1); });
+      const limit = Math.max(2, Math.ceil(visibleChanges.length / 3));
+      const over = [...counts].filter(([, n]) => n > limit).map(([t, n]) => `${t} ×${n}`);
+      const twice = visibleChanges.some((t, k) => k > 0 && bridges.has(t) && visibleChanges[k - 1] === t);
+      if (over.length || twice) {
+        warnings.push({
+          beat: 'deck',
+          type: 'transition-repeat',
+          message: `${over.length ? `a designed change is used on most beat changes (${over.join(', ')}; at most ${limit} of ${visibleChanges.length})` : 'the same designed change plays twice in a row'}; give each story relation its own change from the deck's world and protagonist (craft-and-direction §2.7)`,
+        });
+      }
     }
 
     // A deck whose every visible change is a fade reads like a slide tool's default. A deck that already
