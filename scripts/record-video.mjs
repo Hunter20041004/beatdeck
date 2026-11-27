@@ -181,7 +181,9 @@ function virtualClockInitScript(slow) {
 
   performance.now = () => t0 + (origPerfNow() - t0) / slow;
   Date.now = () => Math.round(d0 + (origDateNow() - d0) / slow);
-  window.requestAnimationFrame = (cb) => origRAF((ts) => cb(t0 + (ts - t0) / slow));
+  // Use the clock, not the frame timestamp: CDP Animation.setPlaybackRate scales that timestamp too,
+  // so scaling it again here would run rAF tweens (draw, countUp, typewriter) far slower than the beat.
+  window.requestAnimationFrame = (cb) => origRAF(() => cb(t0 + (origPerfNow() - t0) / slow));
 }
 
 async function main() {

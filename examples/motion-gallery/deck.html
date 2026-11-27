@@ -1,0 +1,1126 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Beatdeck 動態目錄</title>
+<!--
+  Beatdeck runtime skeleton — window.__beatdeck v1.0
+  ---------------------------------------------------------------------------
+  This file is CONTRACT ONLY. It deliberately has no visual style.
+  Everything marked "DESIGN" is yours to replace with the chosen visual world
+  (palette, type pairing, hero assets, composition archetype, motion tier).
+  Everything marked "RUNTIME" implements the contract; change it only with care.
+  Placeholder scenes carry data-beatdeck-skeleton, and lint.mjs warns until
+  every one of them is replaced.
+-->
+<style>
+  /* ============ DESIGN: tokens (replace with the chosen world) ============ */
+  :root {
+    --ground: #efe9de;
+    --paper: #fbf8f1;
+    --ink: #1c1a17;
+    --muted: #756d63;
+    --rule: #cfc6b6;
+    --accent: #c8402a;
+    --accent-2: #1e5d5a;
+    --font-display: 'Noto Serif TC', 'Songti TC', 'Source Han Serif TC', Georgia, 'WenQuanYi Zen Hei', serif;
+    --font-body: 'PingFang TC', 'Noto Sans TC', 'Microsoft JhengHei', 'WenQuanYi Zen Hei', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+    --ease-cam: cubic-bezier(0.7, 0, 0.2, 1);
+    --cam-ms: 1100ms;
+  }
+
+  /* ============ RUNTIME: stage frame & modes (keep) ============ */
+  html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #000; }
+  #viewport { position: fixed; inset: 0; overflow: hidden; }
+  #stage {
+    position: absolute; left: 0; top: 0; width: 1920px; height: 1080px;
+    transform-origin: 0 0; overflow: hidden;
+    background: var(--ground); color: var(--ink); font-family: var(--font-body);
+  }
+  #world {
+    position: absolute; left: 0; top: 0; width: 1920px; height: 1080px;
+    transform-origin: 0 0; transition: transform var(--cam-ms) var(--ease-cam);
+  }
+  /* Beat changes are animated by the runtime (see MOTION.transition / beat.transition). */
+  .scene { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; opacity: 0; visibility: hidden; }
+  .scene.is-active, .scene.is-leaving { opacity: 1; visibility: visible; }
+  .scene.is-active { z-index: 2; }
+  .scene.is-leaving { z-index: 1; pointer-events: none; }
+  .scene.is-leaving.on-top { z-index: 3; }
+  /* Parallax: elements with data-depth drift against the camera (translate is independent of transform). */
+  [data-depth] { transition: translate var(--cam-ms) var(--ease-cam), scale var(--cam-ms) var(--ease-cam); }
+
+  #subtitle {
+    position: absolute; left: 50%; bottom: 56px; transform: translateX(-50%);
+    max-width: 1500px; padding: 12px 24px; display: none;
+    font: 500 34px/1.35 var(--font-body); color: #fff; background: rgba(0, 0, 0, 0.62); text-align: center;
+  }
+  #subtitle.is-visible { display: block; }
+  #camera-safe-zone {
+    position: absolute; right: 0; bottom: 0; width: 400px; height: 300px; display: none;
+    outline: 3px dashed rgba(220, 60, 40, 0.9); outline-offset: -3px; background: rgba(220, 60, 40, 0.12);
+    pointer-events: none; z-index: 50;
+  }
+  #camera-safe-zone.is-open { display: block; }
+
+  #hud {
+    position: fixed; left: 16px; bottom: 16px; display: flex; gap: 8px; align-items: center;
+    font: 12px/1 var(--font-mono); color: #ddd; background: rgba(0, 0, 0, 0.55); padding: 6px 10px;
+    opacity: 0.25; transition: opacity 200ms ease; z-index: 100;
+  }
+  #hud:hover { opacity: 1; }
+  #hud button { font: inherit; color: inherit; background: none; border: 1px solid #666; padding: 3px 7px; cursor: pointer; }
+  #hud button.is-on { background: #ddd; color: #111; }
+  #notes-drawer {
+    position: fixed; right: 0; top: 0; bottom: 0; width: 440px; padding: 28px; box-sizing: border-box;
+    background: #141414; color: #eee; font: 18px/1.5 var(--font-body);
+    transform: translateX(100%); transition: transform 240ms ease; z-index: 110; overflow: auto;
+  }
+  #notes-drawer.is-open { transform: none; }
+  #notes-drawer .nd-head { font: 12px/1.4 var(--font-mono); color: #aaa; letter-spacing: 0.06em; }
+  #notes-drawer .nd-say { margin: 16px 0; font-size: 22px; }
+  #notes-drawer .nd-cue { color: #f0c27a; }
+
+  body.still *, body.still *::before, body.still *::after { transition: none !important; animation: none !important; }
+  body.still #hud, body.still #notes-drawer, body.still #camera-safe-zone, body.still #subtitle,
+  body.video #hud, body.video #notes-drawer, body.video #camera-safe-zone,
+  body.bare #hud, body.bare #notes-drawer, body.bare #camera-safe-zone, body.bare #subtitle { display: none !important; }
+
+  /* ============ DESIGN: the editing bench ============ */
+  .scene .tag { position: absolute; left: 120px; top: 92px; margin: 0; font: 500 22px/1 var(--font-mono); color: var(--muted); letter-spacing: 0.04em; }
+  .scene .tag b { color: var(--accent); font-weight: 600; }
+  .scene .h { position: absolute; left: 120px; top: 140px; margin: 0; font: 700 74px/1.2 var(--font-display); letter-spacing: 0; color: var(--ink); white-space: nowrap; }
+  .scene .use { position: absolute; left: 120px; bottom: 92px; margin: 0; font: 400 28px/1.4 var(--font-body); color: var(--muted); white-space: nowrap; }
+  .scene .use b { color: var(--ink); font-weight: 600; }
+
+  /* 01 same-move */
+  .s1-grid { position: absolute; left: 120px; top: 470px; display: grid; grid-template-columns: repeat(6, 200px); gap: 26px 24px; }
+  .thumb { height: 112px; background: #e2dacb; position: relative; transition: background-color 220ms ease; }
+  .thumb::before, .thumb::after { content: ""; position: absolute; left: 18px; height: 8px; background: #cbc1af; }
+  .thumb::before { top: 22px; width: 104px; }
+  .thumb::after { top: 44px; width: 150px; height: 5px; }
+  .thumb.is-hot { background: var(--accent); }
+  .thumb.is-hot::before, .thumb.is-hot::after { background: #efb3a6; }
+
+  /* 02 verdict */
+  .s2-paper { position: absolute; left: 860px; top: 250px; width: 600px; height: 640px; background: var(--paper); }
+  .s2-paper .ph { position: absolute; left: 56px; top: 52px; margin: 0; font: 600 24px/1 var(--font-mono); letter-spacing: 0.12em; color: var(--muted); }
+  .s2-row { position: absolute; left: 56px; right: 56px; height: 72px; border-bottom: 1px solid var(--rule); display: flex; align-items: flex-end; padding-bottom: 14px; box-sizing: border-box; font: 400 30px/1 var(--font-body); }
+  .s2-row span { width: 150px; color: var(--muted); font-size: 24px; }
+  .s2-stamp { position: absolute; left: 300px; top: 430px; width: 220px; height: 150px; display: grid; place-items: center; color: var(--accent);
+    font: 800 88px/1 var(--font-display); outline: 7px solid var(--accent); outline-offset: -7px; border-radius: 16px; mix-blend-mode: multiply; }
+
+  /* 03 rewrite */
+  .s3-old, .s3-new { position: absolute; left: 120px; margin: 0; font: 700 104px/1.1 var(--font-display); white-space: nowrap; }
+  .s3-old { top: 450px; color: var(--muted); }
+  .s3-new { top: 640px; color: var(--ink); }
+  .s3-new i { font-style: normal; color: var(--accent); }
+  .s3-mark { position: absolute; left: 1240px; margin: 0; font: 500 24px/1 var(--font-mono); color: var(--muted); letter-spacing: 0.08em; }
+
+  /* 04 route + 05 hand-off */
+  .s4-map { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; }
+  .s4-map .route-under { fill: none; stroke: var(--rule); stroke-width: 3; stroke-dasharray: 2 14; stroke-linecap: round; }
+  .s4-map .route { fill: none; stroke: var(--ink); stroke-width: 5; stroke-linecap: round; }
+  .s4-map .stop { fill: var(--ground); stroke: var(--ink); stroke-width: 5; }
+  .s4-map .stop-label { font: 500 32px var(--font-body); fill: var(--ink); }
+  .s5-disc { position: absolute; left: 1010px; top: 260px; width: 420px; height: 420px; border-radius: 50%; background: var(--accent); color: #fff;
+    display: grid; place-items: center; font: 700 200px/1 var(--font-display); font-variant-numeric: tabular-nums; }
+  .s5-cap { position: absolute; left: 1010px; top: 720px; width: 420px; margin: 0; text-align: center; font: 400 30px/1.3 var(--font-body); color: var(--muted); }
+
+  /* 06 scatter */
+  .s6-table { position: absolute; left: 820px; top: 300px; width: 660px; height: 560px; }
+  .ticket { position: absolute; width: 92px; height: 124px; background: var(--paper);
+    background-image: repeating-linear-gradient(to bottom, transparent 0 22px, #ddd4c4 22px 24px); background-position: 0 16px; }
+  .ticket.is-red { background-color: #f3d7cf; }
+
+  /* 07 reshape */
+  .s7-plot { position: absolute; left: 860px; top: 300px; width: 600px; height: 560px; }
+  .s7-plot svg { position: absolute; inset: 0; overflow: visible; }
+  .s7-plot .axis { stroke: var(--ink); stroke-width: 3; fill: none; }
+  .s7-plot .target { stroke: var(--rule); stroke-width: 2; stroke-dasharray: 8 10; }
+  .s7-plot .curve { stroke: var(--accent); stroke-width: 7; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  .s7-lab { position: absolute; margin: 0; font: 500 26px/1 var(--font-body); color: var(--muted); white-space: nowrap; }
+  .s7-name { position: absolute; left: 360px; top: 400px; margin: 0; font: 700 56px/1 var(--font-display); color: var(--accent); white-space: nowrap; }
+
+  /* 08 click */
+  .s8-win { position: absolute; left: 860px; top: 270px; width: 560px; height: 500px; background: var(--paper); box-sizing: border-box; padding: 44px 48px; }
+  .s8-win h3 { margin: 0 0 26px; font: 700 40px/1 var(--font-body); }
+  .s8-opt { display: flex; align-items: center; gap: 20px; height: 74px; border-bottom: 1px solid var(--rule); font: 400 32px/1 var(--font-body); }
+  .s8-opt .dot { width: 26px; height: 26px; border-radius: 50%; border: 3px solid var(--ink); box-sizing: border-box; transition: background-color 160ms ease, box-shadow 160ms ease; }
+  .s8-opt.is-default .dot, .s8-opt.is-clicked .dot { background: var(--ink); box-shadow: inset 0 0 0 5px var(--paper); }
+  .s8-win:has(.s8-opt.is-clicked) .s8-opt.is-default:not(.is-clicked) .dot { background: transparent; box-shadow: none; }
+  .s8-btn { margin-top: 40px; width: 260px; height: 72px; display: grid; place-items: center; font: 600 32px/1 var(--font-body);
+    outline: 3px solid var(--ink); outline-offset: -3px; transition: background-color 160ms ease, color 160ms ease; }
+  .s8-btn.is-clicked { background: var(--ink); color: var(--paper); }
+  .s8-bar { position: absolute; left: 860px; top: 800px; width: 560px; height: 8px; background: var(--accent); transform-origin: 0 50%; transform: scaleX(0); }
+  .s8-pointer { position: absolute; left: 0; top: 0; width: 44px; height: 56px; transform-origin: 6px 4px; z-index: 5; }
+
+  /* 09 depth (camera move with parallax layers) */
+  .s9-layer { position: absolute; left: -1600px; width: 5200px; pointer-events: none; }
+  .s9-far { top: 430px; height: 650px; }
+  .s9-mid { top: 600px; height: 480px; }
+  .s9-near { top: 800px; height: 280px; }
+  .s9-front { top: 560px; height: 520px; }
+  .s9-layer svg { width: 100%; height: 100%; display: block; }
+  .s9-use { position: absolute; left: 120px; top: 360px; margin: 0; font: 400 28px/1.4 var(--font-body); color: var(--muted); white-space: nowrap; }
+
+  /* 10 type */
+  .s10-box { position: absolute; left: 120px; top: 460px; width: 1040px; height: 96px; border-bottom: 4px solid var(--ink); }
+  .s10-glass { position: absolute; left: 0; top: 26px; width: 44px; height: 44px; }
+  .s10-cmd { position: absolute; left: 76px; top: 18px; margin: 0; font: 500 48px/1.2 var(--font-body); color: var(--ink); white-space: nowrap; }
+  .s10-caret { display: inline-block; width: 0.6em; height: 1.05em; vertical-align: -0.15em; background: var(--ink); margin-left: 4px; }
+  .s10-out { position: absolute; left: 196px; margin: 0; font: 400 32px/1.4 var(--font-body); color: var(--accent-2); white-space: nowrap; }
+
+  /* 11 springs */
+  .s11-row { position: absolute; left: 120px; width: 1300px; height: 120px; }
+  .s11-row .nm { position: absolute; left: 0; top: 22px; margin: 0; font: 700 44px/1 var(--font-display); }
+  .s11-row .pm { position: absolute; left: 0; top: 80px; margin: 0; font: 400 20px/1 var(--font-mono); color: var(--muted); white-space: nowrap; }
+  .s11-row .track { position: absolute; left: 300px; right: 0; top: 52px; height: 2px; background: var(--rule); }
+  .s11-row .end { position: absolute; left: 1180px; top: 30px; width: 2px; height: 46px; background: var(--ink); }
+  .s11-row .ball { position: absolute; left: 300px; top: 22px; width: 64px; height: 64px; border-radius: 50%; background: var(--ink); }
+  .s11-row.r-rubber .ball { background: var(--accent); }
+
+  /* 12 pick */
+  .s12-table { position: absolute; left: 120px; top: 420px; width: 1300px; }
+  .s12-tr { position: relative; display: grid; grid-template-columns: 420px 480px 400px; height: 92px; align-items: center; font: 400 38px/1 var(--font-body); }
+  .s12-tr.th { font: 500 22px/1 var(--font-mono); color: var(--muted); letter-spacing: 0.08em; height: 60px; }
+  .s12-tr b { font: 700 40px/1 var(--font-display); }
+  .s12-tr .hair { position: absolute; left: 0; right: 0; bottom: 0; height: 1px; background: var(--rule); transform-origin: 0 50%; }
+</style>
+</head>
+<body>
+<div id="viewport">
+  <div id="stage">
+    <div id="world">
+      <section class="scene" data-beat="same-move">
+        <p class="tag">01　開場　<b>splitText + spring</b></p>
+        <h1 class="h" data-expected-lines="2">十二頁都用同一種淡入，<br>觀眾第三頁就猜到下一步</h1>
+        <div class="s1-grid">
+          <div class="thumb"></div><div class="thumb"></div><div class="thumb"></div><div class="thumb"></div><div class="thumb"></div><div class="thumb"></div>
+          <div class="thumb"></div><div class="thumb"></div><div class="thumb"></div><div class="thumb"></div><div class="thumb"></div><div class="thumb odd"></div>
+        </div>
+        <p class="use" data-expected-lines="1">接下來每一頁示範<b>一種換頁</b>和<b>一個動作</b>，以及它適合的時機。</p>
+      </section>
+      <section class="scene" data-beat="verdict">
+        <p class="tag">02　換頁 <b>cut</b>　動作 <b>stamp + shake</b></p>
+        <h1 class="h" data-expected-lines="3">故事轉折的地方<br>直接硬切，<br>再蓋一個章</h1>
+        <div class="s2-paper">
+          <p class="ph">提案審查單</p>
+          <div class="s2-row" style="top:96px"><span>編號</span>BD-0412</div>
+          <div class="s2-row" style="top:168px"><span>提案</span>換頁動態改版</div>
+          <div class="s2-row" style="top:240px"><span>審查日</span>11 月 27 日</div>
+          <div class="s2-row" style="top:312px"><span>結果</span></div>
+          <div class="s2-stamp">通過</div>
+        </div>
+        <p class="use" data-expected-lines="1">適合：<b>判決、拍板、公布結果</b></p>
+      </section>
+      <section class="scene" data-beat="rewrite">
+        <p class="tag">03　換頁 <b>wipe-left</b>　動作 <b>strike + wipe</b></p>
+        <h1 class="h" data-expected-lines="1">舊說法劃掉，新說法從旁邊擦進來</h1>
+        <p class="s3-old" data-expected-lines="1">我們下週再看看</p>
+        <p class="s3-mark" style="top:500px">原本</p>
+        <p class="s3-new" data-expected-lines="1">週四<i>下午三點</i>前回覆</p>
+        <p class="s3-mark" style="top:690px">改成</p>
+        <p class="use" data-expected-lines="1">適合：<b>前後對照、修正、改版</b></p>
+      </section>
+      <section class="scene" data-beat="route">
+        <svg class="s4-map" viewBox="0 0 1920 1080" aria-hidden="true">
+          <path class="route-under" d="M 180 760 C 420 560, 640 900, 900 720 S 1260 420, 1480 520 S 1640 640, 1720 470"/>
+          <path class="route" id="b4-route" d="M 180 760 C 420 560, 640 900, 900 720 S 1260 420, 1480 520 S 1640 640, 1720 470"/>
+          <g id="b4-stops"></g>
+          <g id="b4-marker" data-match="marker"><circle r="20" fill="#c8402a"/><path d="M 6 -9 L 18 0 L 6 9 Z" fill="#fbf8f1"/></g>
+        </svg>
+        <p class="tag">04　換頁 <b>iris</b>　動作 <b>draw + followPath</b></p>
+        <h1 class="h" data-expected-lines="2">路線先畫出來，<br>再讓標記沿著走</h1>
+        <p class="use" data-expected-lines="1">適合：<b>流程、旅程、時間軸</b></p>
+      </section>
+      <section class="scene" data-beat="hand-off">
+        <p class="tag">05　換頁 <b>match</b>　動作 <b>countUp</b></p>
+        <h1 class="h" data-expected-lines="2">上一頁的主角<br>直接走進這一頁</h1>
+        <div class="s5-disc" data-match="marker"><span id="b5-num">12</span></div>
+        <p class="s5-cap" data-expected-lines="1">這份目錄的頁數</p>
+        <p class="use" data-expected-lines="1">適合：<b>同一個物件換角度、放大細看</b></p>
+      </section>
+      <section class="scene" data-beat="scatter">
+        <p class="tag">06　換頁 <b>push-up</b>　動作 <b>stagger random + spring</b></p>
+        <h1 class="h" data-expected-lines="2">一大群東西進場，<br>用隨機順序錯開</h1>
+        <div class="s6-table" id="b6-table"></div>
+        <p class="use" data-expected-lines="1">適合：<b>數量感、累積、人潮</b></p>
+      </section>
+      <section class="scene" data-beat="reshape">
+        <p class="tag">07　換頁 <b>zoom</b>　動作 <b>morph</b></p>
+        <h1 class="h" data-expected-lines="2">同一條線換形狀，<br>比換一張圖好跟</h1>
+        <div class="s7-plot" id="b7-plot">
+          <svg viewBox="0 0 600 560" aria-hidden="true">
+            <line class="target" x1="0" y1="140" x2="600" y2="140"/>
+            <path class="axis" d="M 0 0 L 0 560 L 600 560"/>
+            <path class="curve" id="b7-curve" d="M 0 560 L 600 140"/>
+          </svg>
+          <p class="s7-lab" style="left:0; top:584px">時間</p>
+          <p class="s7-lab" style="left:-96px; top:0">位置</p>
+          <p class="s7-lab" style="left:612px; top:126px">終點</p>
+          <p class="s7-name" id="b7-name-a" data-expected-lines="1">等速</p>
+          <p class="s7-name" id="b7-name-b" data-expected-lines="1">彈簧</p>
+        </div>
+        <p class="use" data-expected-lines="1">適合：<b>圖表前後狀態、趨勢改變</b></p>
+      </section>
+      <section class="scene" data-beat="click">
+        <p class="tag">08　換頁 <b>blur</b>　動作 <b>cursor</b></p>
+        <h1 class="h" data-expected-lines="2">示範操作用游標，<br>按下去畫面要有反應</h1>
+        <div class="s8-win">
+          <h3>匯出</h3>
+          <div class="s8-opt is-default" id="b8-o1"><span class="dot"></span>投影片 PDF</div>
+          <div class="s8-opt" id="b8-o2"><span class="dot"></span>分鏡 PDF</div>
+          <div class="s8-opt" id="b8-o3"><span class="dot"></span>影片 MP4</div>
+          <div class="s8-btn" id="b8-btn">開始匯出</div>
+        </div>
+        <div class="s8-bar" id="b8-bar"></div>
+        <svg class="s8-pointer" id="b8-pointer" viewBox="0 0 44 56" aria-hidden="true"><path d="M 4 2 L 4 44 L 15 34 L 23 52 L 31 48 L 23 31 L 38 31 Z" fill="#1c1a17" stroke="#fbf8f1" stroke-width="3" stroke-linejoin="round"/></svg>
+        <p class="use" data-expected-lines="1">適合：<b>產品操作、步驟教學</b></p>
+      </section>
+      <section class="scene" data-beat="depth" style="left:1920px">
+        <div class="s9-layer s9-far" data-depth="0.3"><svg viewBox="0 0 5200 650" preserveAspectRatio="none" aria-hidden="true"><path d="M0 420 L300 300 L520 380 L800 210 L1060 340 L1320 240 L1600 360 L1880 190 L2160 320 L2420 230 L2700 350 L2980 200 L3260 330 L3540 250 L3820 370 L4100 220 L4380 330 L4660 260 L5200 380 L5200 650 L0 650 Z" fill="#ddd4c4"/></svg></div>
+        <div class="s9-layer s9-mid" data-depth="0.6"><svg viewBox="0 0 5200 480" preserveAspectRatio="none" aria-hidden="true"><path d="M0 300 C 400 180, 700 260, 1000 220 S 1600 120, 2000 210 S 2700 300, 3100 190 S 3800 120, 4200 230 S 4900 260, 5200 200 L5200 480 L0 480 Z" fill="#c4b8a3"/></svg></div>
+        <div class="s9-layer s9-near" data-depth="1"><svg viewBox="0 0 5200 280" preserveAspectRatio="none" aria-hidden="true"><path d="M0 120 C 600 70, 1200 140, 1800 100 S 3000 60, 3600 110 S 4600 140, 5200 90 L5200 280 L0 280 Z" fill="#3b3631"/></svg></div>
+        <div class="s9-layer s9-front" data-depth="1.45"><svg viewBox="0 0 5200 520" preserveAspectRatio="none" aria-hidden="true">
+          <g fill="#c8402a"><rect x="1980" y="120" width="10" height="400"/><path d="M1990 120 L2080 150 L1990 180 Z"/><rect x="2740" y="200" width="10" height="320"/><path d="M2750 200 L2830 226 L2750 252 Z"/><rect x="3420" y="90" width="10" height="430"/><path d="M3430 90 L3520 120 L3430 150 Z"/></g></svg></div>
+        <p class="tag">09　換頁 <b>camera</b>　動作 <b>data-depth 景深</b></p>
+        <h1 class="h" data-expected-lines="1">鏡頭平移時，遠景走得慢，近景走得快</h1>
+        <p class="s9-use" data-expected-lines="1">適合：<b style="color:var(--ink)">場景轉換、空間感、地圖</b></p>
+      </section>
+      <section class="scene" data-beat="type" style="left:1920px">
+        <p class="tag">10　換頁 <b>reveal-right</b>　動作 <b>typewriter + ambient</b></p>
+        <h1 class="h" data-expected-lines="2">打字效果只留給<br>真的在打字的東西</h1>
+        <div class="s10-box"><svg class="s10-glass" viewBox="0 0 40 40" aria-hidden="true"><circle cx="17" cy="17" r="11" fill="none" stroke="#1c1a17" stroke-width="4"/><path d="M 25 25 L 36 36" stroke="#1c1a17" stroke-width="4" stroke-linecap="round"/></svg><p class="s10-cmd" data-expected-lines="1"><span id="b10-typed">週末 台北 親子 展覽</span><span class="s10-caret" id="b10-caret"></span></p></div>
+        <p class="s10-out" id="b10-o1" style="top:610px" data-expected-lines="1">兒童新樂園旁的科學展，週六上午人比較少</p>
+        <p class="s10-out" id="b10-o2" style="top:668px" data-expected-lines="1">華山的繪本原畫展，有親子導覽場次</p>
+        <p class="s10-out" id="b10-o3" style="top:726px" data-expected-lines="1">松菸的設計展，推車可以進場</p>
+        <p class="use" data-expected-lines="1">適合：<b>指令、搜尋框、對話</b></p>
+      </section>
+      <section class="scene" data-beat="springs" style="left:1920px">
+        <p class="tag">11　換頁 <b>cover-left</b>　動作 <b>spring 參數</b></p>
+        <h1 class="h" data-expected-lines="1">回彈的個性要跟材質一致</h1>
+        <div class="s11-row r-paper" style="top:360px"><p class="nm">紙</p><p class="pm">stiffness 120 · damping 26</p><div class="track"></div><div class="end"></div><div class="ball"></div></div>
+        <div class="s11-row r-metal" style="top:520px"><p class="nm">金屬</p><p class="pm">stiffness 420 · damping 18</p><div class="track"></div><div class="end"></div><div class="ball"></div></div>
+        <div class="s11-row r-rubber" style="top:680px"><p class="nm">橡膠</p><p class="pm">stiffness 140 · damping 6</p><div class="track"></div><div class="end"></div><div class="ball"></div></div>
+        <p class="use" data-expected-lines="1">適合：<b>決定整份簡報的動態手感</b></p>
+      </section>
+      <section class="scene" data-beat="pick" style="left:1920px">
+        <p class="tag">12　換頁 <b>fade</b>　動作 <b>stagger + wipe</b></p>
+        <h1 class="h" data-expected-lines="2">每份簡報挑兩三種換頁，<br>再加一個招牌動作</h1>
+        <div class="s12-table">
+          <div class="s12-tr th"><span>視覺世界</span><span>換頁</span><span>招牌動作</span><i class="hair"></i></div>
+          <div class="s12-tr"><b>紙本檔案</b><span>硬切、擦除</span><span>蓋章、劃線</span><i class="hair"></i></div>
+          <div class="s12-tr"><b>機械儀表</b><span>推移、硬切</span><span>彈簧回彈</span><i class="hair"></i></div>
+          <div class="s12-tr"><b>電影</b><span>模糊對焦、鏡頭平移</span><span>光圈、拆字</span><i class="hair"></i></div>
+          <div class="s12-tr"><b>地圖</b><span>光圈、鏡頭平移</span><span>沿路徑移動</span><i class="hair"></i></div>
+        </div>
+      </section>
+    </div>
+    <div id="subtitle" role="status" aria-live="polite"></div>
+    <div id="camera-safe-zone" aria-hidden="true"></div>
+  </div>
+</div>
+
+<aside id="notes-drawer" aria-label="Speaker notes">
+  <div class="nd-head" id="nd-head"></div>
+  <div class="nd-say" id="nd-say"></div>
+  <div class="nd-cue" id="nd-cue"></div>
+</aside>
+<nav id="hud" aria-label="Presentation controls">
+  <button type="button" id="btn-prev" aria-label="Previous beat">&larr;</button>
+  <span id="hud-counter">01 / 01</span>
+  <button type="button" id="btn-next" aria-label="Next beat">&rarr;</button>
+  <button type="button" id="btn-notes" title="Speaker notes (N)">N</button>
+  <button type="button" id="btn-cam" title="Camera safe zone (C)">C</button>
+  <button type="button" id="btn-fs" title="Fullscreen (F)">F</button>
+</nav>
+
+<script>
+(() => {
+  "use strict";
+
+  // ============ CONTENT: single source of truth ============
+  // lintAllow: narration-wide lint exemptions, e.g. ["contrast-frame"]; see references/ai-tells.md §7.
+  const META = { title: "Beatdeck 動態目錄", subtitle: "十二種換頁與動作，各自適合的時機", lang: "zh-Hant", width: 1920, height: 1080, speechRate: 3.6, lintAllow: [] };
+
+  // One idea + one visual change per beat. `cam` positions the #world camera (logical px + zoom).
+  const BEATS = [
+    { id: "same-move", chapter: "01 · 問題", speaker: "Host", say: "先看問題。每一頁都淡入、往上浮二十像素，觀眾很快就摸清節奏，注意力也跟著掉。後面每頁換一種做法。", note: "第十二格縮放變紅時停一下。", cam: { x: 0, y: 0, scale: 1 } },
+    { id: "verdict", chapter: "02 · 硬切", speaker: "Host", say: "換頁不一定要過場。劇情急轉的地方直接切過來，讓印章帶著一點震動落下，觀眾會感覺到重量。", transition: "cut", cam: { x: 0, y: 0, scale: 1 } },
+    { id: "rewrite", chapter: "03 · 擦除", speaker: "Host", say: "要對照前後，就讓觀眾親眼看到原本那句被劃掉，再讓修正後的版本從左邊擦進來，比左右並排兩欄更直接。", transition: "wipe-left", cam: { x: 0, y: 0, scale: 1 } },
+    { id: "route", chapter: "04 · 光圈", speaker: "Host", say: "流程類的內容，先把整條路畫出來，再讓一個紅點沿線前進，觀眾的視線會自己跟到下一站。", transition: { type: "iris", origin: "#b4-start", ms: 760 }, cam: { x: 0, y: 0, scale: 1 } },
+    { id: "hand-off", chapter: "05 · 共用元素", speaker: "Host", say: "剛才的紅點沒有消失，它飛到這一頁長大成主角。前後兩頁共用同一個元素，觀眾就不用重新找焦點。", transition: { type: "match", ms: 820 }, cam: { x: 0, y: 0, scale: 1 } },
+    { id: "scatter", chapter: "06 · 隨機錯開", speaker: "Host", say: "很多小東西同時出現時，一排一排照順序跑會很機械。用固定種子的隨機順序加上回彈，像真的被丟到桌上。", transition: "push-up", cam: { x: 0, y: 0, scale: 1 } },
+    { id: "reshape", chapter: "07 · 變形", speaker: "Host", say: "圖表要換狀態時，讓同一條線直接變形。這裡把等速線改成彈簧曲線，衝過頭再回來的那一段一眼就看得到。", transition: { type: "zoom", origin: "#b7-plot", ms: 700 }, cam: { x: 0, y: 0, scale: 1 } },
+    { id: "click", chapter: "08 · 游標", speaker: "Host", say: "示範產品操作時，讓游標真的移過去按下，選項跟按鈕跟著變化，觀眾才知道後面的進度條是哪個動作造成的。", transition: { type: "blur", ms: 640 }, cam: { x: 0, y: 0, scale: 1 } },
+    { id: "depth", chapter: "09 · 鏡頭", speaker: "Host", say: "整份簡報放在一張大畫布上，換頁就是移動鏡頭。遠山、近景和旗子用不同速度移動，畫面就有了深度。", transition: "camera", cam: { x: 1920, y: 0, scale: 1 } },
+    { id: "type", chapter: "10 · 打字", speaker: "Host", say: "打字機效果很容易被濫用。只有畫面上本來就是有人在輸入的東西，例如搜尋框或終端機指令，才用它。", transition: "reveal-right", cam: { x: 1920, y: 0, scale: 1 } },
+    { id: "springs", chapter: "11 · 彈簧", speaker: "Host", say: "同樣是彈簧，阻尼大就像紙，又硬又快像金屬，軟的會一直晃像橡膠。先決定這個世界是什麼材質，再來調數字。", transition: "cover-left", cam: { x: 1920, y: 0, scale: 1 } },
+    { id: "pick", chapter: "12 · 選擇", speaker: "Host", say: "原則很簡單：從主題的材質挑兩三種換頁方式，再找一個只屬於這份簡報的招牌動作，其他地方保持安靜。", transition: { type: "fade", ms: 700 }, cam: { x: 1920, y: 0, scale: 1 } },
+  ];
+
+  // Intra-beat choreography keyed by beat id. Each receives (scene element, helpers).
+  // Every non-liveOnly step must settle synchronously under ?still (the helpers do this for you).
+  const CHOREO = {
+    "same-move": (scene, { splitText, stagger, spring, tween, at }) => {
+      const chars = splitText(scene.querySelector(".h"), { by: "char" });
+      stagger(chars, (el, delay) => spring(el, { translate: ["0 0.45em", "0 0"], opacity: [0, 1] }, { delay, stiffness: 240, damping: 21 }), { each: 18, from: "center" });
+      const thumbs = scene.querySelectorAll(".thumb");
+      const odd = scene.querySelector(".thumb.odd");
+      odd.classList.remove("is-hot");
+      // The deliberately plain part: twelve identical fade-ups.
+      stagger(thumbs, (el, delay) => tween(el, { opacity: [0, 1], translate: ["0 20px", "0 0"] }, { delay, ms: 480, ease: "out" }), { each: 80, delay: 500 });
+      const t = 500 + 11 * 80 + 520;
+      at(t, () => odd.classList.add("is-hot"));
+      spring(odd, { scale: [1, 1.16], rotate: ["0deg", "-4deg"] }, { delay: t, stiffness: 320, damping: 11 });
+    },
+
+    verdict: (scene, { stagger, wipe, stamp }) => {
+      stagger(scene.querySelectorAll(".s2-row"), (el, delay) => wipe(el, { from: "left", delay, ms: 380, ease: "out" }), { each: 110, delay: 120 });
+      stamp(scene.querySelector(".s2-stamp"), { delay: 820, rotate: "-8deg", impact: scene.querySelector(".s2-paper"), amp: 9 });
+    },
+
+    rewrite: (scene, { strike, wipe, tween }) => {
+      strike(scene.querySelector(".s3-old"), { delay: 520, ms: 520, color: "#c8402a", thickness: "0.08em" });
+      tween(scene.querySelector(".s3-old"), { opacity: [1, 0.55] }, { delay: 1000, ms: 400 });
+      wipe(scene.querySelector(".s3-new"), { from: "left", delay: 1050, ms: 820, ease: "inOut" });
+    },
+
+    route: (scene, { draw, followPath, spring, at }) => {
+      const route = scene.querySelector("#b4-route");
+      const stops = scene.querySelector("#b4-stops");
+      const len = route.getTotalLength();
+      const names = ["報名", "繳費", "報到", "上台"];
+      const fr = [0, 0.36, 0.7, 1];
+      if (!stops.childElementCount) {
+        fr.forEach((f, i) => {
+          const p = route.getPointAtLength(len * f);
+          const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+          g.setAttribute("transform", `translate(${p.x} ${p.y})`);
+          if (i === 0) g.id = "b4-start";
+          g.innerHTML = `<g class="pop"><circle class="stop" r="16"/></g><text class="stop-label" x="${i === 3 ? 34 : -32}" y="${i === 3 ? 12 : 66}">${names[i]}</text>`;
+          stops.appendChild(g);
+        });
+      }
+      draw(route, 1300, { delay: 200, ease: "inOut" });
+      const pops = stops.querySelectorAll(".pop");
+      const labels = stops.querySelectorAll(".stop-label");
+      fr.forEach((f, i) => {
+        const t = 1500 + f * 1700;
+        spring(pops[i], { scale: [0, 1] }, { delay: i === 0 ? 300 : t, stiffness: 380, damping: 14 });
+        spring(labels[i], { opacity: [0, 1], translate: ["0 14px", "0 0"] }, { delay: (i === 0 ? 300 : t) + 60 });
+      });
+      followPath(scene.querySelector("#b4-marker"), route, { delay: 1500, ms: 1700, rotate: true, ease: "inOut" });
+    },
+
+    "hand-off": (scene, { countUp, tween }) => {
+      countUp(scene.querySelector("#b5-num"), 12, 900, { delay: 650, ease: "out" });
+      tween(scene.querySelector(".s5-cap"), { opacity: [0, 1], clipPath: ["inset(0 50% 0 50%)", "inset(0 0 0 0)"] }, { delay: 1100, ms: 500, ease: "out" });
+    },
+
+    scatter: (scene, { stagger, spring }) => {
+      const table = scene.querySelector("#b6-table");
+      if (!table.childElementCount) {
+        let seed = 11;
+        const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+        for (let i = 0; i < 48; i += 1) {
+          const tk = document.createElement("div");
+          tk.className = "ticket" + (i % 9 === 4 ? " is-red" : "");
+          const r = (rnd() - 0.5) * 40;
+          tk.style.left = `${Math.round(rnd() * 560)}px`;
+          tk.style.top = `${Math.round(rnd() * 430)}px`;
+          tk.style.rotate = `${r.toFixed(1)}deg`;
+          tk.dataset.r = r.toFixed(1);
+          table.appendChild(tk);
+        }
+      }
+      stagger(table.children, (el, delay) => {
+        const r = Number(el.dataset.r);
+        spring(el, { translate: ["0 -260px", "0 0"], rotate: [`${r + 28}deg`, `${r}deg`], opacity: [0, 1] }, { delay, stiffness: 300, damping: 17 });
+      }, { each: 26, from: "random", seed: 5, delay: 350 });
+    },
+
+    reshape: (scene, { draw, morph, tween, at, isStill }) => {
+      const curve = scene.querySelector("#b7-curve");
+      const N = 40;
+      const pts = (fn) => Array.from({ length: N + 1 }, (_, i) => `${i ? "L" : "M"} ${(600 * i / N).toFixed(1)} ${(560 - 420 * fn(i / N)).toFixed(1)}`).join(" ");
+      let x = 0, v = 0;
+      const sim = [0];
+      for (let i = 1; i <= N; i += 1) { for (let k = 0; k < 40; k += 1) { const a = -150 * (x - 1) - 7.5 * v; v += a / 1600; x += v / 1600; } sim.push(x); }
+      const linear = pts((t) => t);
+      const springD = pts((t) => sim[Math.round(t * N)]);
+      curve.setAttribute("d", linear);
+      draw(curve, 700, { delay: 250, ease: "out" });
+      at(1000, () => { curve.style.strokeDasharray = "none"; });
+      morph(curve, springD, { delay: 1300, ms: 1000, ease: "inOut", fromD: linear });
+      tween(scene.querySelector("#b7-name-a"), { opacity: [1, 0], translate: ["0 0", "0 -24px"] }, { delay: 1300, ms: 380, ease: "in" });
+      tween(scene.querySelector("#b7-name-b"), { opacity: [0, 1], translate: ["0 24px", "0 0"] }, { delay: 1600, ms: 500, ease: "out" });
+    },
+
+    click: (scene, { cursor, tween }) => {
+      const o2 = scene.querySelector("#b8-o2");
+      const btn = scene.querySelector("#b8-btn");
+      o2.classList.remove("is-clicked");
+      btn.classList.remove("is-clicked");
+      cursor(scene.querySelector("#b8-pointer"), [
+        [1500, 960],
+        { x: 920, y: 428, ms: 800, click: o2, hold: 380 },
+        { x: 1000, y: 670, ms: 620, click: btn, hold: 300,
+          onClick: () => tween(scene.querySelector("#b8-bar"), { transform: ["scaleX(0)", "scaleX(1)"] }, { ms: 1100, ease: "inOut" }) },
+        { x: 1120, y: 720, ms: 500 },
+      ], { delay: 450 });
+    },
+
+    depth: (scene, { splitText, stagger, tween }) => {
+      stagger(splitText(scene.querySelector(".h"), { by: "char" }), (el, delay) => tween(el, { opacity: [0, 1], filter: ["blur(10px)", "blur(0px)"] }, { delay, ms: 520, ease: "out" }), { each: 26, delay: 700 });
+      tween(scene.querySelector(".s9-use"), { opacity: [0, 1] }, { delay: 1300, ms: 500 });
+    },
+
+    type: (scene, { typewriter, stagger, tween, ambient }) => {
+      typewriter(scene.querySelector("#b10-typed"), "週末 台北 親子 展覽", 1300, { delay: 500 });
+      stagger(scene.querySelectorAll(".s10-out"), (el, delay) => tween(el, { opacity: [0, 1], translate: ["0 -12px", "0 0"] }, { delay, ms: 260, ease: "out" }), { each: 90, delay: 2000 });
+      ambient(scene.querySelector("#b10-caret"), [{ opacity: 1, offset: 0 }, { opacity: 1, offset: 0.5 }, { opacity: 0, offset: 0.5 }, { opacity: 0, offset: 1 }], { ms: 1000, ease: "linear", alternate: false });
+    },
+
+    springs: (scene, { spring, at }) => {
+      const rows = [[".r-paper", 120, 26], [".r-metal", 420, 18], [".r-rubber", 140, 6]];
+      const play = (delay) => rows.forEach(([sel, stiffness, damping]) =>
+        spring(scene.querySelector(`${sel} .ball`), { translate: ["0px 0", "848px 0"] }, { delay, stiffness, damping }));
+      play(500);
+      const replay = () => { play(0); at(3600, replay, { liveOnly: true }); };
+      at(4100, replay, { liveOnly: true });
+    },
+
+    pick: (scene, { stagger, wipe, tween }) => {
+      const rows = scene.querySelectorAll(".s12-tr");
+      stagger(rows, (el, delay) => {
+        wipe(el, { from: "left", delay, ms: 620, ease: "out" });
+        tween(el.querySelector(".hair"), { transform: ["scaleX(0)", "scaleX(1)"] }, { delay: delay + 120, ms: 700, ease: "inOut" });
+      }, { each: 150, delay: 500 });
+    },
+  };
+
+  // ============ DESIGN: motion personality (replace with the chosen world) ============
+  // How this world moves. Take the verbs from its material: paper slides, folds and stamps; metal
+  // snaps and overshoots; light irises and flares; film cuts, racks focus and whip-pans.
+  // See references/craft-and-direction.md §2. Placeholder values below are deliberately plain.
+  const MOTION = {
+    // Default beat change. Override per beat with `transition: "wipe-left"` or
+    // { type: "iris", ms: 700, origin: "#lens" | { x: 960, y: 540 }, ease: "inOut" }.
+    // Types: cut, fade, push-<dir>, cover-<dir>, reveal-<dir>, wipe-<dir>, iris, zoom, blur, match, camera
+    // (<dir> = left | right | up | down; going back plays the same change in reverse).
+    transition: { type: "fade", ms: 520 },
+    ease: {
+      out: "cubic-bezier(0.16, 1, 0.3, 1)",
+      in: "cubic-bezier(0.6, 0, 0.9, 0.4)",
+      inOut: "cubic-bezier(0.75, 0, 0.2, 1)",
+      snap: "cubic-bezier(0.3, 1.6, 0.6, 1)",
+      linear: "linear",
+    },
+    spring: { stiffness: 240, damping: 19, mass: 1 },
+  };
+
+  // ============ RUNTIME (keep) ============
+  const params = new URLSearchParams(location.search);
+  const isStill = params.has("still");
+  const isVideo = params.has("video");
+  const isBare = params.has("bare");
+  const chromeHidden = isStill || isVideo || isBare;
+  if (isStill) document.body.classList.add("still");
+  if (isVideo) document.body.classList.add("video");
+  if (isBare) document.body.classList.add("bare");
+
+  const $ = (id) => document.getElementById(id);
+  const stage = $("stage");
+  const world = $("world");
+  const subtitleEl = $("subtitle");
+  const camZone = $("camera-safe-zone");
+  const notes = $("notes-drawer");
+  const scenes = BEATS.map((b) => world.querySelector(`[data-beat="${b.id}"]`));
+  let active = 0;
+  let notesOpen = false;
+  let camOpen = false;
+
+  let timers = [];
+  let rafs = [];
+  function clearTimeline() {
+    timers.forEach(clearTimeout);
+    rafs.forEach(cancelAnimationFrame);
+    timers = [];
+    rafs = [];
+  }
+
+  // at(ms, fn, { liveOnly }) — schedule a step inside the current beat.
+  function at(ms, fn, opts) {
+    const liveOnly = Boolean(opts && opts.liveOnly);
+    if (isStill) { if (!liveOnly) fn(); return; }
+    if (ms <= 0) { fn(); return; }
+    timers.push(setTimeout(fn, ms));
+  }
+
+  // ---- easing: names from MOTION.ease, CSS strings, functions, or springs { stiffness, damping, mass } ----
+  const EASE_FN = {
+    linear: (t) => t,
+    in: (t) => t * t * t,
+    out: (t) => 1 - Math.pow(1 - t, 3),
+    inOut: (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2),
+    snap: (t) => { const c = 1.9; return 1 + (c + 1) * Math.pow(t - 1, 3) + c * Math.pow(t - 1, 2); },
+  };
+  const springCache = new Map();
+  // Simulate a damped spring from 0 to 1; returns { duration (ms), samples, easing: CSS linear() }.
+  function springCurve(sp) {
+    const k = (sp && sp.stiffness) || MOTION.spring.stiffness;
+    const c = (sp && sp.damping) || MOTION.spring.damping;
+    const m = (sp && sp.mass) || MOTION.spring.mass || 1;
+    const key = `${k}/${c}/${m}`;
+    if (springCache.has(key)) return springCache.get(key);
+    const dt = 1 / 600;
+    let x = 0, v = 0, t = 0;
+    const raw = [0];
+    while (t < 4) {
+      const a = (-k * (x - 1) - c * v) / m;
+      v += a * dt; x += v * dt; t += dt;
+      raw.push(x);
+      if (t > 0.05 && Math.abs(x - 1) < 0.001 && Math.abs(v) < 0.01) break;
+    }
+    raw[raw.length - 1] = 1;
+    const n = 48;
+    const samples = Array.from({ length: n + 1 }, (_, i) => raw[Math.round((i / n) * (raw.length - 1))]);
+    const out = { duration: Math.round(t * 1000), samples, easing: `linear(${samples.map((s) => +s.toFixed(4)).join(", ")})` };
+    springCache.set(key, out);
+    return out;
+  }
+  const isSpring = (e) => Boolean(e && typeof e === "object" && ("stiffness" in e || "damping" in e || e.spring));
+  function cssEase(e) {
+    if (isSpring(e)) return springCurve(e).easing;
+    if (typeof e === "string") return MOTION.ease[e] || e;
+    return MOTION.ease.out;
+  }
+  function easeFn(e) {
+    if (typeof e === "function") return e;
+    if (isSpring(e)) { const s = springCurve(e).samples; return (t) => { const f = t * (s.length - 1); const i = Math.floor(f); return i >= s.length - 1 ? 1 : s[i] + (s[i + 1] - s[i]) * (f - i); }; }
+    return EASE_FN[e] || EASE_FN.out;
+  }
+
+  // ---- WAAPI helpers: every Animation is tracked per scene, finished when the beat is left,
+  // cancelled when the beat is entered again, and jumped to its end under ?still. ----
+  const sceneAnims = new Map();
+  let currentScene = null;
+  function track(anim, infinite) {
+    if (!currentScene) return anim;
+    if (!sceneAnims.has(currentScene)) sceneAnims.set(currentScene, []);
+    sceneAnims.get(currentScene).push({ anim, infinite });
+    return anim;
+  }
+  function settleSceneAnims(el) { (sceneAnims.get(el) || []).forEach(({ anim, infinite }) => { try { infinite ? anim.cancel() : anim.finish(); } catch (_) { anim.cancel(); } }); }
+  function cancelSceneAnims(el) { (sceneAnims.get(el) || []).forEach(({ anim }) => anim.cancel()); sceneAnims.delete(el); }
+  const toEls = (t) => (!t ? [] : typeof t === "string" ? Array.from((currentScene || document).querySelectorAll(t)) : t instanceof Element ? [t] : Array.from(t));
+
+  // animate(ms, onFrame(t∈[0,1]), { delay, liveOnly, ease }) — rAF tween, settles to t=1 under ?still.
+  function animate(ms, onFrame, opts = {}) {
+    const ease = easeFn(opts.ease);
+    const dur = isSpring(opts.ease) && !opts.ms ? springCurve(opts.ease).duration : ms;
+    at(opts.delay || 0, () => {
+      if (isStill) { onFrame(1); return; }
+      const start = performance.now();
+      const tick = (now) => {
+        const t = Math.min(1, Math.max(0, (now - start) / dur));
+        onFrame(t >= 1 ? 1 : ease(t));
+        if (t < 1) rafs.push(requestAnimationFrame(tick));
+      };
+      rafs.push(requestAnimationFrame(tick));
+    }, opts);
+  }
+
+  // tween(target, keyframes, { ms, delay, ease, liveOnly }) — Web Animations keyframes, held at both ends.
+  // target: element, list, or selector (scoped to the current scene). ease may be a spring.
+  function tween(target, keyframes, opts = {}) {
+    if (opts.liveOnly && isStill) return [];
+    const spring = isSpring(opts.ease);
+    const duration = opts.ms || (spring ? springCurve(opts.ease).duration : 600);
+    return toEls(target).map((el) => {
+      const anim = track(el.animate(keyframes, { duration, delay: opts.delay || 0, easing: cssEase(opts.ease), fill: "both" }));
+      if (isStill) anim.finish();
+      return anim;
+    });
+  }
+
+  // spring(target, keyframes, { stiffness, damping, mass, delay }) — physical settle with real overshoot.
+  function spring(target, keyframes, opts = {}) {
+    const sp = { stiffness: opts.stiffness || MOTION.spring.stiffness, damping: opts.damping || MOTION.spring.damping, mass: opts.mass || MOTION.spring.mass };
+    return tween(target, keyframes, { ...opts, ease: sp, ms: opts.ms });
+  }
+
+  // stagger(targets, fn(el, delayMs, i), { each, from: "start"|"end"|"center"|"edges"|"random"|index, delay, seed })
+  function stagger(targets, fn, opts = {}) {
+    const els = toEls(targets);
+    const n = els.length;
+    const each = opts.each === undefined ? 70 : opts.each;
+    const from = opts.from === undefined ? "start" : opts.from;
+    let seed = opts.seed || 7;
+    const rand = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+    const randomOrder = from === "random" ? els.map((_, i) => [rand(), i]).sort((a, b) => a[0] - b[0]).map((p) => p[1]) : null;
+    els.forEach((el, i) => {
+      let rank;
+      if (randomOrder) rank = randomOrder.indexOf(i);
+      else if (from === "end") rank = n - 1 - i;
+      else if (from === "center") rank = Math.abs(i - (n - 1) / 2);
+      else if (from === "edges") rank = (n - 1) / 2 - Math.abs(i - (n - 1) / 2);
+      else if (typeof from === "number") rank = Math.abs(i - from);
+      else rank = i;
+      fn(el, (opts.delay || 0) + rank * each, i);
+    });
+  }
+
+  // splitText(el, { by: "char" | "word" }) — wrap text in inline-block spans (keeps <br> and child elements).
+  // Returns the spans. Use "char" for CJK. Idempotent: calling again returns the same spans.
+  function splitText(el, opts = {}) {
+    if (!el) return [];
+    const by = opts.by || "char";
+    if (el.dataset.split === by) return Array.from(el.querySelectorAll(":scope .bd-split"));
+    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    const nodes = [];
+    while (walker.nextNode()) nodes.push(walker.currentNode);
+    nodes.forEach((node) => {
+      const parts = by === "word" ? node.textContent.split(/(\s+)/) : Array.from(node.textContent);
+      const frag = document.createDocumentFragment();
+      parts.forEach((part) => {
+        if (!part) return;
+        if (/^\s+$/.test(part)) { frag.appendChild(document.createTextNode(part)); return; }
+        const span = document.createElement("span");
+        span.className = "bd-split";
+        span.style.display = "inline-block";
+        span.textContent = part;
+        frag.appendChild(span);
+      });
+      node.parentNode.replaceChild(frag, node);
+    });
+    el.dataset.split = by;
+    return Array.from(el.querySelectorAll(":scope .bd-split"));
+  }
+
+  // wipe(target, { from: "left"|"right"|"top"|"bottom"|"center", ms, delay, ease }) — hard-edged clip reveal.
+  const WIPE_FROM = { left: "inset(0 100% 0 0)", right: "inset(0 0 0 100%)", top: "inset(0 0 100% 0)", bottom: "inset(100% 0 0 0)", center: "inset(0 50% 0 50%)", middle: "inset(50% 0 50% 0)" };
+  function wipe(target, opts = {}) {
+    return tween(target, { clipPath: [WIPE_FROM[opts.from || "left"] || WIPE_FROM.left, "inset(0 0 0 0)"] }, { ms: 700, ease: "inOut", ...opts });
+  }
+
+  // iris(target, { x: "50%", y: "50%", ms, delay, ease }) — circular aperture opening from a point.
+  function iris(target, opts = {}) {
+    const p = `${opts.x || "50%"} ${opts.y || "50%"}`;
+    return tween(target, { clipPath: [`circle(0% at ${p})`, `circle(150% at ${p})`] }, { ms: 800, ease: "inOut", ...opts });
+  }
+
+  // stamp(target, { rotate: "-4deg", ms, delay, impact: element-to-shake }) — ink-stamp hit.
+  function stamp(target, opts = {}) {
+    const r = opts.rotate || "-4deg";
+    const anims = tween(target, [
+      { transform: `scale(1.9) rotate(${r})`, opacity: 0, filter: "blur(6px)", easing: "cubic-bezier(0.55, 0, 1, 0.45)" },
+      { transform: `scale(0.93) rotate(${r})`, opacity: 1, filter: "blur(0px)", offset: 0.55 },
+      { transform: `scale(1) rotate(${r})`, opacity: 1, filter: "blur(0px)" },
+    ], { ms: 420, ease: "linear", ...opts });
+    if (opts.impact) shake(opts.impact, { delay: (opts.delay || 0) + (opts.ms || 420) * 0.55, amp: opts.amp || 6 });
+    return anims;
+  }
+
+  // shake(target, { amp: 10, ms: 380, delay }) — decaying impact jolt on the `translate` property.
+  function shake(target, opts = {}) {
+    const a = opts.amp || 10;
+    const steps = [1, -0.8, 0.6, -0.4, 0.22, -0.1, 0];
+    return tween(target, { translate: ["0 0", ...steps.map((s, i) => `${(s * a).toFixed(1)}px ${(i % 2 ? 0.4 : -0.4) * s * a}px`)] }, { ms: 380, ease: "linear", ...opts });
+  }
+
+  // strike(target, { ms, delay, color, thickness: "0.09em" }) — a rule drawn through the text.
+  function strike(target, opts = {}) {
+    return toEls(target).map((el) => {
+      let bar = el.querySelector(":scope > .bd-strike");
+      if (!bar) {
+        if (getComputedStyle(el).position === "static") el.style.position = "relative";
+        bar = document.createElement("span");
+        bar.className = "bd-strike";
+        bar.setAttribute("aria-hidden", "true");
+        bar.style.cssText = `position:absolute;left:-0.06em;right:-0.06em;top:52%;height:${opts.thickness || "0.09em"};background:${opts.color || "currentColor"};transform-origin:0 50%;pointer-events:none;`;
+        el.appendChild(bar);
+      }
+      return tween(bar, { transform: ["scaleX(0)", "scaleX(1)"] }, { ms: 460, ease: "inOut", ...opts })[0];
+    });
+  }
+
+  // draw(svgPath, ms, { delay, ease }) — stroke-dashoffset line drawing.
+  function draw(pathEl, ms, opts = {}) {
+    if (!pathEl) return;
+    const len = pathEl.getTotalLength ? pathEl.getTotalLength() : 1000;
+    pathEl.style.strokeDasharray = `${len}`;
+    pathEl.style.strokeDashoffset = `${len}`;
+    animate(ms, (t) => { pathEl.style.strokeDashoffset = `${len * (1 - t)}`; }, opts);
+  }
+
+  // followPath(svgEl, svgPath, { ms, delay, ease, rotate, from: 0, to: 1 }) — move an SVG element along a path
+  // (both inside the same <svg>). rotate: true turns it to face the direction of travel.
+  function followPath(el, pathEl, opts = {}) {
+    if (!el || !pathEl) return;
+    const len = pathEl.getTotalLength();
+    const a = opts.from || 0;
+    const b = opts.to === undefined ? 1 : opts.to;
+    const m = () => (el.parentNode.getCTM() || pathEl.getCTM()).inverse().multiply(pathEl.getCTM());
+    animate(opts.ms || 1200, (t) => {
+      const l = len * (a + (b - a) * t);
+      const mm = m();
+      const p = pathEl.getPointAtLength(l).matrixTransform(mm);
+      let rot = "";
+      if (opts.rotate) {
+        const q = pathEl.getPointAtLength(Math.min(len, l + 1)).matrixTransform(mm);
+        const o = pathEl.getPointAtLength(Math.max(0, l - 1)).matrixTransform(mm);
+        rot = ` rotate(${(Math.atan2(q.y - o.y, q.x - o.x) * 180) / Math.PI})`;
+      }
+      el.setAttribute("transform", `translate(${p.x} ${p.y})${rot}`);
+    }, { ease: "inOut", ...opts });
+  }
+
+  // morph(svgPath, toD, { ms, delay, ease }) — interpolate between two `d` strings with the same command
+  // structure (same commands, same number count). Mismatched shapes snap to the target.
+  function morph(pathEl, toD, opts = {}) {
+    if (!pathEl) return;
+    const num = /-?\d*\.?\d+(?:e[-+]?\d+)?/gi;
+    const fromD = opts.fromD || pathEl.getAttribute("d") || "";
+    const a = (fromD.match(num) || []).map(Number);
+    const b = (toD.match(num) || []).map(Number);
+    const shape = (d) => d.replace(num, "#");
+    if (a.length !== b.length || shape(fromD) !== shape(toD)) { at(opts.delay || 0, () => pathEl.setAttribute("d", toD)); return; }
+    const parts = toD.split(num);
+    animate(opts.ms || 800, (t) => {
+      pathEl.setAttribute("d", parts.reduce((acc, s, i) => acc + s + (i < b.length ? +(a[i] + (b[i] - a[i]) * t).toFixed(2) : ""), ""));
+    }, { ease: "inOut", ...opts });
+  }
+
+  // cursor(pointerEl, steps, { delay, ease, stepMs }) — move a pointer through stage-pixel waypoints (via
+  // `translate`). A step is [x, y] or { x, y, ms, hold, click: targetEl, onClick }; a click presses the
+  // pointer and adds .is-clicked to the target. One call per pointer per beat: chain clicks as steps.
+  function cursor(pointerEl, steps, opts = {}) {
+    if (!pointerEl || !steps || !steps.length) return;
+    const delay = opts.delay || 0;
+    let t = 0;
+    const moves = [];
+    const presses = [];
+    steps.forEach((s, i) => {
+      const p = Array.isArray(s) ? { x: s[0], y: s[1] } : s;
+      if (i > 0) t += p.ms || opts.stepMs || 700;
+      moves.push({ t, p });
+      if (p.click || p.onClick) presses.push({ t, p });
+      if (p.click || p.onClick || p.hold) { t += p.hold || 320; moves.push({ t, p }); }
+    });
+    const total = Math.max(t, 1);
+    const moveEase = cssEase(opts.ease || "inOut");
+    tween(pointerEl, moves.map(({ t: mt, p }) => ({ offset: mt / total, translate: `${p.x}px ${p.y}px`, easing: moveEase })), { ms: total, delay, ease: "linear" });
+    if (!presses.length) return;
+    const d = Math.min(0.5, 110 / total);
+    const kf = [{ offset: 0, scale: 1 }];
+    presses.forEach(({ t: pt }) => {
+      const o = pt / total;
+      const last = kf[kf.length - 1].offset;
+      kf.push({ offset: Math.min(1, Math.max(last, o)), scale: 1 });
+      kf.push({ offset: Math.min(1, Math.max(last, o + d)), scale: 0.8 });
+      kf.push({ offset: Math.min(1, Math.max(last, o + 2 * d)), scale: 1 });
+    });
+    if (kf[kf.length - 1].offset < 1) kf.push({ offset: 1, scale: 1 });
+    tween(pointerEl, kf, { ms: total, delay, ease: "linear" });
+    presses.forEach(({ t: pt, p }) => at(delay + pt + 90, () => {
+      if (p.click) p.click.classList.add("is-clicked");
+      if (p.onClick) p.onClick();
+    }));
+  }
+
+  // ambient(target, keyframes, { ms, ease, alternate: true, delay }) — idle loop, live only (never in ?still).
+  function ambient(target, keyframes, opts = {}) {
+    if (isStill) return [];
+    return toEls(target).map((el) => track(el.animate(keyframes, {
+      duration: opts.ms || 2400, delay: opts.delay || 0, easing: cssEase(opts.ease || "inOut"),
+      iterations: Infinity, direction: opts.alternate === false ? "normal" : "alternate",
+    }), true));
+  }
+
+  // countUp(el, to, ms, { from, decimals, prefix, suffix, delay, ease }) — numeric roll-up.
+  function countUp(el, to, ms, opts = {}) {
+    if (!el) return;
+    const from = opts.from || 0;
+    const d = opts.decimals || 0;
+    const fmt = (v) => `${opts.prefix || ""}${v.toLocaleString(META.lang || undefined, { minimumFractionDigits: d, maximumFractionDigits: d })}${opts.suffix || ""}`;
+    el.textContent = fmt(from);
+    animate(ms, (t) => { el.textContent = fmt(from + (to - from) * t); }, opts);
+  }
+
+  // typewriter(el, text, ms, { delay }) — reveal text character by character.
+  function typewriter(el, text, ms, opts = {}) {
+    if (!el) return;
+    const chars = Array.from(text);
+    el.textContent = "";
+    animate(ms, (t) => { el.textContent = chars.slice(0, Math.round(chars.length * t)).join(""); }, { ...opts, ease: "linear" });
+  }
+
+  const helpers = {
+    at, animate, tween, spring, stagger, splitText, wipe, iris, stamp, shake, strike,
+    draw, followPath, morph, cursor, ambient, countUp, typewriter, isStill, isVideo,
+  };
+
+  // ---- beat changes: MOTION.transition, overridden per beat by beat.transition ----
+  const OPPOSITE = { left: "right", right: "left", up: "down", down: "up" };
+  function transitionSpec(beat, reverse) {
+    let raw = beat && beat.transition !== undefined ? beat.transition : MOTION.transition;
+    if (typeof raw === "string") raw = { type: raw };
+    const spec = { ...(raw || { type: "fade" }) };
+    const m = /^(push|cover|reveal|wipe)-(left|right|up|down)$/.exec(spec.type || "");
+    if (m) { spec.type = m[1]; spec.dir = spec.dir || m[2]; }
+    if (/^(push|cover|reveal|wipe)$/.test(spec.type) && !spec.dir) spec.dir = "left";
+    if (reverse && spec.dir) spec.dir = OPPOSITE[spec.dir];
+    spec.reverse = Boolean(reverse);
+    return spec;
+  }
+  function stageScale() { return stage.getBoundingClientRect().width / 1920 || 1; }
+  function stagePoint(el) {
+    const s = stage.getBoundingClientRect();
+    const r = el.getBoundingClientRect();
+    const k = stageScale();
+    return { x: (r.left + r.width / 2 - s.left) / k, y: (r.top + r.height / 2 - s.top) / k };
+  }
+  let running = [];
+  let leaving = null;
+  let hiddenForMatch = [];
+  function finishTransition() {
+    running.forEach((a) => a.cancel());
+    running = [];
+    hiddenForMatch.forEach((el) => { el.style.visibility = ""; });
+    hiddenForMatch = [];
+    if (leaving) leaving.classList.remove("is-leaving", "on-top");
+    leaving = null;
+  }
+  function playTransition(fromEl, toEl, spec) {
+    const type = spec.type || "fade";
+    if (type === "cut") return;
+    const ms = spec.ms || (type === "camera" ? parseFloat(getComputedStyle(stage).getPropertyValue("--cam-ms")) || 900 : 560);
+    const easing = cssEase(spec.ease || (type === "fade" || type === "blur" ? "inOut" : "inOut"));
+    const o = { duration: ms, easing, fill: "both" };
+    const run = (el, kf, opts = o) => { const a = el.animate(kf, opts); running.push(a); return a; };
+    leaving = fromEl;
+    fromEl.classList.add("is-leaving");
+    const top = (el) => { if (el === fromEl) fromEl.classList.add("on-top"); };
+    const W = 1920, H = 1080;
+    const vec = { left: [-W, 0], right: [W, 0], up: [0, -H], down: [0, H] }[spec.dir] || [-W, 0];
+    const off = (f) => `translate(${vec[0] * f}px, ${vec[1] * f}px)`;
+    let origin = { x: W / 2, y: H / 2 };
+    if (spec.origin && typeof spec.origin === "object") origin = spec.origin;
+    else if (typeof spec.origin === "string") {
+      const host = (spec.reverse ? fromEl : toEl).querySelector(spec.origin);
+      if (host) origin = stagePoint(host);
+    }
+    const ox = `${origin.x}px ${origin.y}px`;
+    const radius = Math.hypot(Math.max(origin.x, W - origin.x), Math.max(origin.y, H - origin.y)) + 4;
+    let main = null;
+    if (type === "fade") main = run(toEl, { opacity: [0, 1] });
+    else if (type === "push") { main = run(toEl, { transform: [off(-1), "none"] }); run(fromEl, { transform: ["none", off(1)] }); }
+    else if (type === "cover") { main = run(toEl, { transform: [off(-1), "none"] }); run(fromEl, { transform: ["none", off(0.18)], filter: ["brightness(1)", "brightness(0.7)"] }); }
+    else if (type === "reveal") { top(fromEl); main = run(fromEl, { transform: ["none", off(1)] }); run(toEl, { transform: [off(-0.18), "none"] }); }
+    else if (type === "wipe") {
+      const from = { left: "inset(0 0 0 100%)", right: "inset(0 100% 0 0)", up: "inset(100% 0 0 0)", down: "inset(0 0 100% 0)" }[spec.dir];
+      main = run(toEl, { clipPath: [from, "inset(0 0 0 0)"] });
+    } else if (type === "iris") {
+      if (spec.reverse) { top(fromEl); main = run(fromEl, { clipPath: [`circle(${radius}px at ${ox})`, `circle(0px at ${ox})`] }); }
+      else main = run(toEl, { clipPath: [`circle(0px at ${ox})`, `circle(${radius}px at ${ox})`] });
+    } else if (type === "zoom") {
+      const into = { transformOrigin: ox };
+      if (spec.reverse) { main = run(toEl, { transform: ["scale(1.4)", "none"], opacity: [0, 1], ...into }); run(fromEl, { transform: ["none", "scale(0.86)"], ...into }); }
+      else { top(fromEl); main = run(fromEl, { transform: ["none", "scale(1.4)"], opacity: [1, 0], ...into }); run(toEl, { transform: ["scale(0.86)", "none"], ...into }); }
+    } else if (type === "blur") {
+      main = run(toEl, { opacity: [0, 1], filter: ["blur(22px)", "blur(0px)"] });
+      run(fromEl, { filter: ["blur(0px)", "blur(22px)"] });
+    } else if (type === "match") main = playMatch(fromEl, toEl, o, run);
+    else if (type === "camera") main = run(toEl, { opacity: [1, 1] });
+    else main = run(toEl, { opacity: [0, 1] });
+    if (main) main.onfinish = () => { if (leaving === fromEl) finishTransition(); };
+  }
+  // match: elements sharing data-match="key" in both scenes fly from the old place to the new one,
+  // the rest of the new scene fades in around them. Best between beats that share the camera.
+  function playMatch(fromEl, toEl, o, run) {
+    const pairs = [];
+    toEl.querySelectorAll("[data-match]").forEach((el) => {
+      const src = fromEl.querySelector(`[data-match="${CSS.escape(el.dataset.match)}"]`);
+      if (src) pairs.push([src, el]);
+    });
+    const matched = new Set(pairs.map((p) => p[1]));
+    const fadeSet = [];
+    const walk = (node) => Array.from(node.children).forEach((c) => {
+      if (matched.has(c)) return;
+      if (Array.from(matched).some((m) => c.contains(m))) walk(c); else fadeSet.push(c);
+    });
+    walk(toEl);
+    fadeSet.forEach((el) => run(el, { opacity: [0, 1] }, { ...o, delay: o.duration * 0.35, duration: o.duration * 0.65 }));
+    run(fromEl, { opacity: [1, 0] }, { ...o, duration: o.duration * 0.5 });
+    let main = run(toEl, { opacity: [1, 1] });
+    pairs.forEach(([src, el]) => {
+      const a = src.getBoundingClientRect();
+      const b = el.getBoundingClientRect();
+      el.style.translate = "100px 0px";
+      const k = (el.getBoundingClientRect().left - b.left) / 100 || stageScale();
+      el.style.translate = "";
+      src.style.visibility = "hidden";
+      hiddenForMatch.push(src);
+      const dx = (a.left + a.width / 2 - (b.left + b.width / 2)) / k;
+      const dy = (a.top + a.height / 2 - (b.top + b.height / 2)) / k;
+      const sx = b.width ? a.width / b.width : 1;
+      const sy = b.height ? a.height / b.height : 1;
+      main = run(el, { translate: [`${dx}px ${dy}px`, "0px 0px"], scale: [`${sx} ${sy}`, "1 1"], transformOrigin: ["50% 50%", "50% 50%"], transformBox: ["fill-box", "fill-box"] });
+    });
+    return main;
+  }
+
+  function estimateSeconds(b) {
+    if (typeof b.duration === "number" && b.duration > 0) return b.duration;
+    const say = (b.say || "").trim();
+    const cjk = (say.match(/[㐀-䶿一-鿿぀-ヿ]/g) || []).length;
+    const latin = (say.replace(/[㐀-䶿一-鿿぀-ヿ]/g, " ").match(/[A-Za-z0-9]+(?:[._'-][A-Za-z0-9]+)*/g) || []).length;
+    return Math.max(1.5, cjk / (META.speechRate || 3.6) + latin / 2.5);
+  }
+
+  function clampIndex(i) {
+    const n = Number.isFinite(i) ? Math.trunc(i) : 0;
+    return Math.max(0, Math.min(BEATS.length - 1, n));
+  }
+
+  // Fit the 1920x1080 stage into the visible viewport and centre it explicitly, so the result
+  // never depends on how a host page (iframe, artifact wrapper, preview pane) sizes <body>.
+  function fitStage() {
+    const vp = document.getElementById("viewport");
+    const vw = (vp && vp.clientWidth) || window.innerWidth || 1920;
+    const vh = (vp && vp.clientHeight) || window.innerHeight || 1080;
+    const s = Math.min(vw / 1920, vh / 1080);
+    stage.style.transform = `translate(${(vw - 1920 * s) / 2}px, ${(vh - 1080 * s) / 2}px) scale(${s})`;
+  }
+  if (window.ResizeObserver) new ResizeObserver(() => fitStage()).observe(document.getElementById("viewport"));
+
+  function setCamera(cam) {
+    const c = cam || { x: 0, y: 0, scale: 1 };
+    world.style.transform = `translate(${-c.x * c.scale}px, ${-c.y * c.scale}px) scale(${c.scale})`;
+    // Parallax: data-depth="0.4" drifts at 40% of the camera move (far), "1.5" moves faster (near).
+    // Each layer sits where it was authored when the camera is at its own scene's `cam`.
+    world.querySelectorAll("[data-depth]").forEach((el) => {
+      const d = parseFloat(el.dataset.depth);
+      if (!Number.isFinite(d)) return;
+      const home = el.closest(".scene");
+      const hi = home ? scenes.indexOf(home) : -1;
+      const ref = (hi >= 0 && BEATS[hi].cam) || { x: 0, y: 0 };
+      el.style.translate = `${(1 - d) * (c.x - (ref.x || 0))}px ${(1 - d) * (c.y - (ref.y || 0))}px`;
+    });
+  }
+
+  let rendered = false;
+  function renderBeat(index) {
+    clearTimeline();
+    finishTransition();
+    const from = rendered ? active : null;
+    const fromEl = from === null ? null : scenes[from];
+    if (fromEl) settleSceneAnims(fromEl);
+    active = clampIndex(index);
+    rendered = true;
+    const beat = BEATS[active];
+    const toEl = scenes[active];
+    if (toEl) cancelSceneAnims(toEl);
+    currentScene = toEl;
+    setCamera(beat.cam);
+    scenes.forEach((el, i) => el && el.classList.toggle("is-active", i === active));
+    // Forward uses the entered beat's transition; going back replays the left beat's transition reversed.
+    const back = from !== null && active < from;
+    const spec = transitionSpec(back ? BEATS[from] : beat, back);
+    document.body.dataset.beatTransition = from === null || from === active ? "" : spec.type;
+
+    const pad = (n) => String(n).padStart(2, "0");
+    $("hud-counter").textContent = `${pad(active + 1)} / ${pad(BEATS.length)}`;
+    $("nd-head").textContent = `BEAT ${pad(active + 1)} / ${pad(BEATS.length)} · ${beat.chapter || ""} · ${beat.speaker || ""} · ~${estimateSeconds(beat).toFixed(1)}s`;
+    $("nd-say").textContent = beat.say || "";
+    $("nd-cue").textContent = beat.note || "";
+
+    const choreo = CHOREO[beat.id];
+    if (typeof choreo === "function") choreo(toEl, helpers);
+    if (fromEl && toEl && fromEl !== toEl && !isStill) playTransition(fromEl, toEl, spec);
+    if (isStill) void world.offsetHeight;
+  }
+
+  function setSubtitle(text) {
+    const t = typeof text === "string" ? text.trim() : "";
+    subtitleEl.textContent = t;
+    subtitleEl.classList.toggle("is-visible", Boolean(t) && !isStill && !isBare);
+  }
+
+  function toggleNotes(force) {
+    notesOpen = typeof force === "boolean" ? force : !notesOpen;
+    notes.classList.toggle("is-open", notesOpen);
+    $("btn-notes").classList.toggle("is-on", notesOpen);
+  }
+  function toggleCam(force) {
+    camOpen = typeof force === "boolean" ? force : !camOpen;
+    camZone.classList.toggle("is-open", camOpen);
+    $("btn-cam").classList.toggle("is-on", camOpen);
+  }
+  function toggleFullscreen() {
+    if (!document.fullscreenElement) document.documentElement.requestFullscreen?.().catch(() => {});
+    else document.exitFullscreen?.().catch(() => {});
+  }
+
+  window.__beatdeck = {
+    version: "1.0",
+    meta: { ...META },
+    list: () => BEATS.map((b, index) => ({
+      index, id: b.id, chapter: b.chapter, speaker: b.speaker, say: b.say || "",
+      duration: b.duration, note: b.note, pdfSkip: Boolean(b.pdfSkip),
+    })),
+    current: () => active,
+    goTo: (i) => { renderBeat(i); return active; },
+    setSubtitle,
+  };
+
+  if (!chromeHidden) {
+    window.addEventListener("keydown", (e) => {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const t = e.target;
+      if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT" || t.isContentEditable)) return;
+      const k = e.key;
+      const act = {
+        ArrowRight: () => renderBeat(active + 1), " ": () => renderBeat(active + 1), PageDown: () => renderBeat(active + 1),
+        ArrowLeft: () => renderBeat(active - 1), PageUp: () => renderBeat(active - 1), Backspace: () => renderBeat(active - 1),
+        Home: () => renderBeat(0), End: () => renderBeat(BEATS.length - 1),
+        n: toggleNotes, N: toggleNotes, c: toggleCam, C: toggleCam, f: toggleFullscreen, F: toggleFullscreen,
+      }[k];
+      if (act) { e.preventDefault(); act(); }
+    });
+    $("viewport").addEventListener("click", (e) => {
+      if (e.target.closest("#hud") || e.target.closest("#notes-drawer")) return;
+      renderBeat(e.clientX < window.innerWidth * 0.25 ? active - 1 : active + 1);
+    });
+    $("btn-prev").addEventListener("click", () => renderBeat(active - 1));
+    $("btn-next").addEventListener("click", () => renderBeat(active + 1));
+    $("btn-notes").addEventListener("click", () => toggleNotes());
+    $("btn-cam").addEventListener("click", () => toggleCam());
+    $("btn-fs").addEventListener("click", toggleFullscreen);
+  }
+  window.addEventListener("resize", fitStage);
+
+  (async function init() {
+    fitStage();
+    const p = parseInt(params.get("p") || "1", 10);
+    const start = Number.isFinite(p) ? clampIndex(p - 1) : 0;
+    if (document.fonts && document.fonts.ready) {
+      await Promise.race([document.fonts.ready, new Promise((r) => setTimeout(r, 1500))]);
+    }
+    world.style.transition = "none";
+    renderBeat(start);
+    void world.offsetHeight;
+    requestAnimationFrame(() => {
+      if (!isStill) world.style.transition = "";
+      document.body.dataset.ready = "1";
+    });
+  })();
+})();
+</script>
+</body>
+</html>

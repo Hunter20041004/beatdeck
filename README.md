@@ -15,6 +15,16 @@ An open-source Agent Skill and headless Chromium toolkit for crafting film-like,
 | **Single Source of Truth** | Separate speaker doc & slides drift quickly | Video-only output; no live talk mode | One HTML drives Live Talk, Notes, Script, PDF, Share HTML & MP4 |
 | **Dependencies** | Office / browser SaaS | Node + bundler + React ecosystem | Plain HTML/CSS/JS + Playwright Chromium (`ffmpeg` optional for MP4) |
 
+### What's New in v1.5: Motion With a Point of View
+
+- **Beat changes beyond the cross-fade**: the skeleton ships 11 changes (`cut`, `fade`, `push-*`, `cover-*`, `reveal-*`, `wipe-*`, `iris`, `zoom`, `blur`, `match`, `camera`), set per beat with `transition`, reversed automatically when going back, with the leaving beat holding its final frame.
+- **New helpers**: `spring` (real damped springs), `stagger` (from start, end, center, edges, seeded random), `splitText`, `wipe`, `iris`, `stamp` + `shake`, `strike`, `followPath`, `morph`, `cursor`, `ambient`, plus `data-depth` parallax and `data-match` shared elements. All settle instantly under `?still`.
+- **Motion personality in every direction proposal**: how this world moves, from its material (paper wipes and stamps, machines snap on stiff springs, film racks focus and cuts), 2–3 change types and one signature move per deck. See [`references/craft-and-direction.md`](references/craft-and-direction.md) §2.
+- **See the motion**: `filmstrip.mjs` lays out each beat as frames over time, so review finally looks at the animation and not only the last frame.
+- **Motion lint**: `motion-flat`, `motion-repeat`, `motion-one-ease`, `transition-monotony`, plus a motion section in `ai-tells.md`.
+- **New example**: [`examples/motion-gallery/deck.html`](examples/motion-gallery/deck.html), 12 beats, one change and one helper each, with when to use it.
+- **Fix**: rAF-driven helpers (`draw`, `countUp`, `typewriter`) ran far too slowly in `record-video.mjs` output because the slow-motion clock was applied twice.
+
 ### What's New in v1.4: AI-Tell Guard
 
 - **A researched catalog of what makes decks look and sound machine-made**: [`references/ai-tells.md`](references/ai-tells.md) covers visual defaults (purple-blue gradients, frosted glass, emoji icons, text walls, Agenda/Thank-you slides), structure (unsourced stats, generic personas, narration that reads the slide), English stock phrasing and "not X, but Y" framing, and Traditional Chinese 套話 (賦能、助力、打造極致體驗…), 「不是…而是…」, plus Taiwan localization (簡體字, 大陸用語, 全形標點). Every entry pairs the tell with what to do instead.
@@ -125,11 +135,14 @@ Invoke tools from any workspace using `<skill-dir>` (the directory containing `S
 node <skill-dir>/scripts/new-deck.mjs <path/to/deck.html> [--title "Deck Title"] [--lang en] [--beats 6 | --ids a,b,c] [--force]
 
 # 1. Verify runtime contract, console errors, broken images, overflow, line wraps + craft warnings
-node <skill-dir>/scripts/lint.mjs <path/to/deck.html> [--strict] [--json]
+node <skill-dir>/scripts/lint.mjs <path/to/deck.html> [--strict] [--json] [--motion=false]
 
 # 1b. Render beat PNGs + contact sheet (or a standalone hero asset page with --raw)
 node <skill-dir>/scripts/snapshot.mjs <path/to/deck.html> [--beats 1,3-5] [--cols 4] [--bare] [--out dir]
 node <skill-dir>/scripts/snapshot.mjs <path/to/hero.html> --raw [--out dir]
+
+# 1c. Motion filmstrip: frames over time for each beat
+node <skill-dir>/scripts/filmstrip.mjs <path/to/deck.html> [--beats 2-4] [--times 0,120,280,500,900,1500,2600] [--slow 4] [--out dir]
 
 # 2. Export timestamped speaker script Markdown from BEATS (prints to stdout if --out omitted)
 node <skill-dir>/scripts/script-export.mjs <path/to/deck.html> [--out script.md] [--rate 3.6]
@@ -149,6 +162,7 @@ Try them from the cloned `beatdeck` directory on the demo deck:
 ```bash
 node ./scripts/lint.mjs examples/beatdeck-intro/deck.html --strict
 node ./scripts/snapshot.mjs examples/beatdeck-intro/deck.html --out /tmp/beatdeck-snaps
+node ./scripts/filmstrip.mjs examples/motion-gallery/deck.html --beats 2-5 --out /tmp/beatdeck-motion
 node ./scripts/new-deck.mjs /tmp/my-talk/deck.html --title "My Talk" --ids opening,shift,proof
 node ./scripts/script-export.mjs examples/beatdeck-intro/deck.html --out /tmp/beatdeck-script.md
 node ./scripts/pdf-export.mjs examples/beatdeck-intro/deck.html --mode storyboard --cols 2 --out /tmp/beatdeck-storyboard.pdf
@@ -164,9 +178,10 @@ node ./scripts/bundle-share.mjs examples/beatdeck-intro/deck.html --out /tmp/bea
 - `references/ai-tells.md` — Visual and wording AI tells (English + 繁體中文), rewrite recipes, human checklist
 - `references/stage-contract.md` — Exact `window.__beatdeck` v1.0 runtime specification
 - `references/export-and-recording.md` — CLI documentation and custom `--plan` schema
-- `scripts/` — Skeleton scaffolder, headless Chromium linter, snapshot/contact-sheet renderer, script exporter, PDF exporter, share bundler, and 60fps recorder
+- `scripts/` — Skeleton scaffolder, headless Chromium linter, snapshot/contact-sheet renderer, motion filmstrip, script exporter, PDF exporter, share bundler, and 60fps recorder
 - `templates/skeleton.html` — Style-free runtime skeleton used by `new-deck.mjs`
 - `examples/beatdeck-intro/deck.html` — Showcase presentation implementing `window.__beatdeck` v1.0
+- `examples/motion-gallery/deck.html` — Motion catalog: one beat change and one helper per beat, built on the skeleton
 - `tests/e2e.test.mjs` — End-to-end verification suite (`npm test`)
 
 ---

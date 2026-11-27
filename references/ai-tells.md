@@ -31,6 +31,23 @@ A lint pass is necessary, not sufficient. No rule list can guarantee a deck "doe
 
 ---
 
+### Motion tells
+
+Motion gives a deck away faster than any colour, because the audience sees the same gesture twelve times. Watch the deck with `filmstrip.mjs`; `snapshot.mjs` only shows the last frame.
+
+| Tell | Why it reads as AI | Do instead | Lint |
+| :--- | :--- | :--- | :--- |
+| Every element fades in and drifts up ~20px, staggered left to right | The default entrance of every animation library | Verbs from the world's material: wipe, draw, stamp, spring, split type, follow a path (craft-and-direction §2.1) | `motion-flat` |
+| The same entrance on beat after beat | Each beat choreographed in isolation | Change gesture, tempo, direction or origin between neighbours | `motion-repeat` |
+| One easing curve for everything | Nobody decided how this world moves | Named curves per role (arrive, leave, impact, camera) and a spring where things are physical | `motion-one-ease` |
+| A cross-fade between every pair of beats | The tool's default transition | Pick each change from what the story does there: cut at a turn, match to continue, iris to go deeper | `transition-monotony` |
+| Everything bounces | Springs used as decoration | Overshoot only where the material would; paper does not bounce | review (filmstrip) |
+| Every number counts up, every line types itself | Effects applied because they exist | `countUp` for the one number that matters; `typewriter` only for things that are actually typed | review |
+| Endless decorative loops (pulsing dots, floating blobs) | "Make it feel alive" filler | At most one `ambient` loop that means something (a caret, a live indicator) | review |
+| Motion that starts after a blank pause on every beat | Long uniform delays | The first frame of each beat should already show something; vary the first delay | review (filmstrip) |
+
+---
+
 ## 2. Structure & Content Tells
 
 | Tell | Do instead | Lint |
@@ -141,14 +158,15 @@ The pattern behind every rewrite: **a concrete scene, a real number, or a decisi
 
 ## 6. Human Checklist (what lint cannot catch)
 
-Run this on the contact sheet (`snapshot.mjs`) and the exported script (`script-export.mjs`):
+Run this on the contact sheet (`snapshot.mjs`), the motion filmstrip (`filmstrip.mjs`) and the exported script (`script-export.mjs`):
 
 1. **Swap test:** replace the product or topic name with a competitor's. If the deck still works, it says nothing specific. Rewrite until it breaks.
 2. **Source test:** point at every number. Can you name where it came from? If not, remove it or mark it `[missing]` and ask.
 3. **Speaker test:** read every `say` aloud. Would *this* speaker say it, in this room? Cut any sentence that sounds like a press release.
 4. **Glance test:** look at the contact sheet for five seconds. Do beats share one visual system *and* differ in composition? Any beat that looks like a template default?
 5. **Claim test:** read only the headlines in order. Do they tell the story as claims, without the body text?
-6. **Need-to-know test:** for every fact on stage, ask whether this audience would understand or act differently without it. Revision history, review rounds, tooling, and submission notes almost never pass.
+6. **Motion test:** read `filmstrip.png` row by row. Could you tell which beat is which with the text hidden, from how it moves alone? Does the signature move appear, and only where it means something?
+7. **Need-to-know test:** for every fact on stage, ask whether this audience would understand or act differently without it. Revision history, review rounds, tooling, and submission notes almost never pass.
 
 ---
 

@@ -15,6 +15,16 @@
 | **單一資料來源** | 投影片與講稿分開寫，改完就不同步 | 只能輸出影片，無法直接上台簡報 | 同一份 HTML 同時產出現場簡報、備忘錄、講稿、PDF、分享檔與 MP4 |
 | **執行環境** | 辦公軟體或雲端簡報服務 | Node + 打包器 + React 生態系 | 純原生 HTML/CSS/JS ＋ Playwright Chromium（輸出 MP4 時另需 `ffmpeg`） |
 
+### v1.5 新增亮點：動態設計更多元
+
+- **換頁不再只有淡入淡出**：骨架內建 11 種換頁方式（硬切、淡入、推移、覆蓋、揭開、擦除、光圈、穿越放大、模糊對焦、共用元素接續、鏡頭平移），每一拍可用 `transition` 指定，倒退時自動反向播放，舊頁會帶著最後畫面離場。
+- **新增動畫工具**：彈簧回彈 `spring`、多種錯開順序 `stagger`（由中心、兩端、可重現的隨機）、逐字拆分 `splitText`、遮罩擦除 `wipe`、光圈 `iris`、蓋章 `stamp`＋震動 `shake`、劃線 `strike`、沿路徑移動 `followPath`、路徑變形 `morph`、游標點擊 `cursor`、待機循環 `ambient`，以及 `data-depth` 景深視差與 `data-match` 共用元素。全部在 `?still` 下直接定格，PDF 與錄影照常運作。
+- **「動態性格」納入視覺方向提案**：依主題材質決定怎麼動（紙本用擦除與蓋章、機械用硬彈簧、電影用對焦與硬切），每份簡報挑 2–3 種換頁加一個招牌動作。見 [`references/craft-and-direction.md`](references/craft-and-direction.md) §2。
+- **看得到動態**：新增 `filmstrip.mjs`，把每一拍在不同時間點的畫面排成膠捲，審查時第一次能真的看到動畫本身，不只是最後定格。
+- **lint 抓動態單調**：新增 `motion-flat`（幾乎每拍都只是淡入上浮）、`motion-repeat`（連續多拍同一種動作）、`motion-one-ease`（全部同一條緩動曲線）、`transition-monotony`（換頁方式幾乎都一樣）四種警告；`ai-tells.md` 也補上動態版的 AI 通病清單。
+- **新示範簡報**：[`examples/motion-gallery/deck.html`](examples/motion-gallery/deck.html) 用 12 拍各示範一種換頁和一個動作，以及適合的時機。
+- **修正錄影中 `draw`、`countUp`、`typewriter` 等逐幀動畫變得極慢的問題**（慢動作時鐘把時間縮放算了兩次）。
+
 ### v1.4 新增亮點：AI 痕跡防護
 
 - **整理成冊的「AI 簡報通病」清單**：[`references/ai-tells.md`](references/ai-tells.md) 涵蓋：
@@ -132,11 +142,14 @@ npx serve .
 node <skill-dir>/scripts/new-deck.mjs <path/to/deck.html> [--title "簡報標題"] [--lang zh-Hant] [--beats 6 | --ids a,b,c] [--force]
 
 # 1. 版面與介面規範檢查（零 console error、零破圖、零超框、零中英文意外斷行）＋設計警告
-node <skill-dir>/scripts/lint.mjs <path/to/deck.html> [--strict] [--json]
+node <skill-dir>/scripts/lint.mjs <path/to/deck.html> [--strict] [--json] [--motion=false]
 
 # 1b. 輸出每拍 PNG 與總覽圖（加 --raw 則單獨渲染主視覺頁面）
 node <skill-dir>/scripts/snapshot.mjs <path/to/deck.html> [--beats 1,3-5] [--cols 4] [--bare] [--out dir]
 node <skill-dir>/scripts/snapshot.mjs <path/to/hero.html> --raw [--out dir]
+
+# 1c. 動態膠捲：每一拍在 0～2.6 秒間的多個時間點各截一張，檢查動畫本身
+node <skill-dir>/scripts/filmstrip.mjs <path/to/deck.html> [--beats 2-4] [--times 0,120,280,500,900,1500,2600] [--slow 4] [--out dir]
 
 # 2. 從 BEATS 匯出含時間軸與講者統計的 Markdown 講稿（未指定 --out 時直接輸出至 stdout）
 node <skill-dir>/scripts/script-export.mjs <path/to/deck.html> [--out script.md] [--rate 3.6]
@@ -156,6 +169,7 @@ node <skill-dir>/scripts/record-video.mjs <path/to/deck.html> [--out deck.mp4] [
 ```bash
 node ./scripts/lint.mjs examples/beatdeck-intro/deck.html --strict
 node ./scripts/snapshot.mjs examples/beatdeck-intro/deck.html --out /tmp/beatdeck-snaps
+node ./scripts/filmstrip.mjs examples/motion-gallery/deck.html --beats 2-5 --out /tmp/beatdeck-motion
 node ./scripts/new-deck.mjs /tmp/my-talk/deck.html --title "我的簡報" --lang zh-Hant --ids opening,shift,proof
 node ./scripts/script-export.mjs examples/beatdeck-intro/deck.html --out /tmp/beatdeck-script.md
 node ./scripts/pdf-export.mjs examples/beatdeck-intro/deck.html --mode storyboard --cols 2 --out /tmp/beatdeck-storyboard.pdf
@@ -174,6 +188,7 @@ node ./scripts/bundle-share.mjs examples/beatdeck-intro/deck.html --out /tmp/bea
 - `scripts/` — 骨架產生器、Chromium 檢查器、快照與總覽圖、講稿匯出、PDF 匯出、單檔打包與 60fps 錄影工具
 - `templates/skeleton.html` — `new-deck.mjs` 使用的無風格執行期骨架
 - `examples/beatdeck-intro/deck.html` — 符合 `window.__beatdeck` v1.0 介面規範的 12 拍示範簡報
+- `examples/motion-gallery/deck.html` — 動態目錄：每拍示範一種換頁和一個動作，以骨架製作
 - `tests/e2e.test.mjs` — 端對端測試套件（`npm test`）
 
 ---

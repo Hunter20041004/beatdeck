@@ -255,3 +255,56 @@ export function parseCliArgs(argv, booleanFlags = new Set()) {
   }
   return { positional, flags };
 }
+
+/**
+ * Init script for a page clock whose speed can change at runtime: `window.__bdSetClockRate(r)`
+ * makes timers, rAF, performance.now() and Date.now() run r× as fast as real time (r = 0.125 is
+ * 8× slow motion, r = 16 fast-forwards). Pair it with CDP `Animation.setPlaybackRate` for CSS/WAAPI.
+ */
+export function variableClockInitScript() {
+  const origSetTimeout = window.setTimeout.bind(window);
+  const origSetInterval = window.setInterval.bind(window);
+  const origPerfNow = performance.now.bind(performance);
+  const origDateNow = Date.now.bind(Date);
+  const origRAF = window.requestAnimationFrame.bind(window);
+  let rate = 1;
+  let realAnchor = origPerfNow();
+  let virtAnchor = realAnchor;
+  const d0 = origDateNow();
+  const p0 = realAnchor;
+  const vnow = (real = origPerfNow()) => virtAnchor + (real - realAnchor) * rate;
+  window.__bdSetClockRate = (r) => {
+    const real = origPerfNow();
+    virtAnchor = vnow(real);
+    realAnchor = real;
+    rate = r;
+  };
+  window.setTimeout = (fn, delay = 0, ...args) => origSetTimeout(fn, (Number(delay) || 0) / rate, ...args);
+  window.setInterval = (fn, delay = 0, ...args) => origSetInterval(fn, (Number(delay) || 0) / rate, ...args);
+  performance.now = () => vnow();
+  Date.now = () => Math.round(d0 + (vnow() - p0));
+  // Ignore the frame timestamp: CDP Animation.setPlaybackRate also scales it, which would count twice.
+  window.requestAnimationFrame = (cb) => origRAF(() => cb(vnow()));
+}
+
+/**
+ * Parse a 1-based beat selection such as "1,3-5,9" into sorted unique 0-based indices.
+ * @param {string | undefined} spec
+ * @param {number} total
+ * @returns {number[]}
+ */
+export function parseBeatSelection(spec, total) {
+  if (!spec) return Array.from({ length: total }, (_, i) => i);
+  const out = new Set();
+  for (const part of String(spec).split(',').map((s) => s.trim()).filter(Boolean)) {
+    const m = part.match(/^(\d+)(?:-(\d+))?$/);
+    if (!m) throw new Error(`Invalid --beats segment "${part}" (use e.g. 1,3-5)`);
+    const a = Number(m[1]);
+    const b = m[2] ? Number(m[2]) : a;
+    for (let n = Math.min(a, b); n <= Math.max(a, b); n += 1) {
+      if (n < 1 || n > total) throw new Error(`Beat ${n} out of range 1..${total}`);
+      out.add(n - 1);
+    }
+  }
+  return Array.from(out).sort((x, y) => x - y);
+}
