@@ -1,7 +1,7 @@
 # Beatdeck
 
 **Presentations that direct themselves.**  
-An open-source Agent Skill and headless Chromium toolkit for crafting film-like, beat-driven HTML presentations—with no fixed templates, no slide boxes, and a single source of truth from live talk to 60fps MP4.
+An open-source Agent Skill and headless Chromium toolkit for crafting film-like, beat-driven HTML presentations—with card-free visual worlds, bespoke hero craft, and a single source of truth from live talk to 60fps MP4.
 
 ---
 
@@ -9,17 +9,19 @@ An open-source Agent Skill and headless Chromium toolkit for crafting film-like,
 
 | | Traditional Slides (PPT / Deck Builders) | Video Frameworks (Remotion) | Beatdeck |
 | :--- | :--- | :--- | :--- |
-| **Visual Model** | Disconnected rectangles & bullet templates | React timeline components & build steps | One continuous `1920×1080` visual world per topic |
+| **Visual Model** | Disconnected card rectangles & bullet templates | React timeline components & build steps | One continuous `1920×1080` visual world with card-free compositions |
 | **Authoring Unit** | Static pages | Frame-accurate JSX animations | Narrative **beats** (`BEATS` array) with `at()` intra-beat choreography |
-| **Direction & Motion** | Fixed themes & canned transitions | Manual component wiring | Pre-build **2–3 bespoke style proposals** + 3 Motion Tiers (`Measured` / `Choreographed` / `Kinetic`) |
+| **Direction & Craft** | Fixed themes & canned transitions | Manual component wiring | **2–3 bespoke world proposals** + **Hero Asset Craft Pass** + 3 Motion Tiers |
 | **Single Source of Truth** | Separate speaker doc & slides drift quickly | Video-only output; no live talk mode | One HTML drives Live Talk, Notes, Script, PDF, Share HTML & MP4 |
 | **Dependencies** | Office / browser SaaS | Node + bundler + React ecosystem | Plain HTML/CSS/JS + Playwright Chromium (`ffmpeg` optional for MP4) |
 
-### What's New in v1.1
+### What's New in v1.2
 
-- **Visual Direction Alignment**: Before writing `BEATS` or CSS, the skill proposes **2–3 distinct visual world directions** tailored to your topic and aligns on look and feel upfront.
-- **3 Motion Intensity Tiers**: Choose `Measured` (calm architectural editorial), `Choreographed` (sequenced multi-step reveals & SVG draws), or `Kinetic` (cursor interactions, mechanical stamps, and ambient life).
-- **Intra-Beat Choreography (`at(ms, fn, { liveOnly })`)**: Direct multi-stage timelines, SVG line-drawing, live counters, and persistent stage protagonists inside each beat—automatically settling into clean `?still` snapshots and scaling cleanly under `record-video.mjs`.
+- **Card-Free Structural Archetypes**: Explicitly bans the repetitive "AI slide-card shell" (dot-kicker + header rule + corner crop marks + bordered grid boxes) in favor of **5 card-free composition archetypes**—clean hero canvases, full-bleed cross-sections, real product windows with hairline callouts, raw print spreads, and asymmetric typographic stages.
+- **Mandatory Hero Asset Craft Pass (Before Assembly)**: Separates asset craft from deck coding so visuals never degrade into crude boxes. Includes two explicit paths:
+  - **Route A (Real Products, Games & Hardware)**: Gather genuine high-res captures/renders first and stage them at `65–85%` of `#stage` with hairline leader lines.
+  - **Route B (Zero-Screenshot Proposals & Concept Talks)**: Choose from 4 high-craft visual routes (architectural cross-sections, multi-gradient characters, tactile printed artifacts, or stage-wide editorial data visuals) verified against a **3-Layer Fidelity Bar** at `1920×1080` before assembling `BEATS`.
+- **Includes v1.1 Choreography & Alignment**: Pre-build **2–3 distinct visual world proposals**, **3 Motion Intensity Tiers** (`Measured` / `Choreographed` / `Kinetic`), and deterministic `at(ms, fn, { liveOnly })` timelines that settle cleanly for `?still` snapshots and scale smoothly under `record-video.mjs`.
 
 ---
 
@@ -65,7 +67,7 @@ npx playwright install chromium
   ln -s /path/to/beatdeck .cursor/skills/beatdeck
   ```
 
-> Once installed, ask your agent to build a presentation, pitch deck, talk, or walkthrough—it will follow `SKILL.md` to invent a bespoke visual world, author `BEATS`, verify layout in headless Chromium, and export your deliverables.
+> Once installed, ask your agent to build a presentation, pitch deck, talk, or walkthrough—it will follow `SKILL.md` to align on a card-free visual world, craft and inspect hero assets first, author `BEATS`, verify layout in headless Chromium, and export your deliverables.
 
 ---
 
@@ -135,7 +137,7 @@ node ./scripts/bundle-share.mjs examples/beatdeck-intro/deck.html --out /tmp/bea
 ## Repository Layout
 
 - `SKILL.md` — Core Agent Skill instructions and ordered workflow
-- `references/craft-and-direction.md` — Single-world stage methodology, beat storytelling, typography & review gate
+- `references/craft-and-direction.md` — Card-free composition archetypes, hero asset craft pass, beat storytelling, typography & review gate
 - `references/stage-contract.md` — Exact `window.__beatdeck` v1.0 runtime specification
 - `references/export-and-recording.md` — CLI documentation and custom `--plan` schema
 - `scripts/` — Headless Chromium linter, script exporter, PDF exporter, share bundler, and 60fps recorder

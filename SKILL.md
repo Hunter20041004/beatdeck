@@ -5,14 +5,20 @@ description: Methodology and headless Chromium CLI tooling for crafting film-lik
 
 # Beatdeck
 
-Beatdeck is a presentation craft methodology paired with a thin browser runtime contract (`window.__beatdeck` v1.0) and headless Chromium CLI tooling. Every presentation invents its own bespoke visual world, motion grammar, and narrative arc—never a recycled slide template, bullet-list box, or default color theme.
+Beatdeck is a presentation craft methodology paired with a thin browser runtime contract (`window.__beatdeck` v1.0) and headless Chromium CLI tooling. Every presentation invents its own bespoke visual world, card-free composition, crafted hero visuals, and motion grammar—never a recycled slide template, bordered-card shell, or default color theme.
 
 ## Core Methodology
 
-### 1. Single-World Stage
+### 1. Single-World Stage & Card-Free Composition
 - Build one coherent visual metaphor on a `1920×1080` logical `#stage` (navigated via camera pan/zoom on an inner `#world` canvas or choreographed transitions) instead of disconnected slide rectangles.
 - Derive palette, paper/ink contrast, typography pairing, and motion grammar from the subject itself.
-- Reject generic dark SaaS neon, purple-blue AI gradients, card-inside-card boxes, 3-column icon grids, and emoji UI icons (draw crisp inline SVGs or typographic markers instead).
+- **Ban the Default AI Slide-Card Shell**: Explicitly reject defaulting to `top dot-kicker + full-width header rule + 4 corner crop marks + bordered card boxes`. Also reject generic dark SaaS neon, purple-blue AI gradients, card-inside-card nesting, 3-column icon grids, and emoji UI icons (draw crisp inline SVGs or typographic markers instead).
+- Vary beats across **5 Card-Free Structural Composition Archetypes** so decks break out of slide-box sameness:
+  1. **Clean Canvas + Single Character/Hero**: Open ground, oversized display type on one side, single layered character or focal artifact on the other—zero borders and zero header chrome.
+  2. **Full-Bleed Scene / Architectural Cross-Section**: Edge-to-edge cutaway or illustrated streetscape occupying `65–85%` of `#stage`, anchored by one minimal headline or marginal callout.
+  3. **Real Product Window + Hairline Callouts**: Genuine app or game frame occupying most of the stage with thin SVG leader lines pointing directly to exact UI details.
+  4. **Raw Physical Artifact / Print Spread**: Tactile broadsheet, 35mm film contact sheet, or ledger sheet rendered with real print rules—never web-app rounded cards.
+  5. **Asymmetric Typographic Stage**: Oversized kinetic numbers or editorial headlines set directly on the canvas with zero enclosing boxes.
 
 ### 2. Beat-Driven Storytelling (`BEATS`)
 - Deliver **one idea and one visual change per beat**. Never stack multiple unrelated reveals into a single beat.
@@ -21,7 +27,7 @@ Beatdeck is a presentation craft methodology paired with a thin browser runtime 
 
 ### 3. Film-Grade Intra-Beat Choreography
 - Treat each beat as a directed micro-scene rather than a static fade-in: sequence multi-step actions with `at(ms, fn, { liveOnly })` inside `goTo()` (clearing all pending timers/rAFs on every beat transition).
-- Reuse **persistent stage protagonists** (a recurring artifact, spine, browser frame, or map) that morph across adjacent beats instead of rebuilding disconnected layouts per beat.
+- Reuse **persistent stage protagonists** (a recurring artifact, continuous cross-section, spine, browser frame, or map) that pan, zoom, or morph across adjacent beats instead of rebuilding disconnected boxes per beat.
 - Match motion density to one of three **Motion Intensity Tiers**:
   - **`Measured`**: Calm architectural reveals, slow camera glides, crisp rule/type wipes (editorial dossiers, minimalist essays).
   - **`Choreographed`**: 2–3 sequenced `at()` steps per beat, SVG `stroke-dashoffset` line-drawing, `countUp` numeric roll-ups, and motif morphing (product demos, keynotes, research).
@@ -63,6 +69,7 @@ One HTML file serves five delivery targets without forks:
 
 ### 6. Typography Discipline & Verification
 - Lock intended CJK and Latin line breaks explicitly with `<br>` and `data-expected-lines="K"` on headlines and callouts.
+- Keep inactive beat elements cleanly hidden (`display: none`, `visibility: hidden`, or `opacity: 0`) so automated geometry checks inspect only the active beat.
 - Always run [scripts/lint.mjs](scripts/lint.mjs) in headless Chromium before delivery to catch text overflowing `1920×1080`, unexpected line wraps, broken images, and console errors.
 
 ## Ordered Workflow
@@ -72,31 +79,36 @@ Follow this order where sequence affects correctness:
 1. **Gather real material and target delivery modes first**
    - Confirm who the audience is and which outputs are needed (live talk, webcam PiP, offline HTML share, storyboard PDF, or MP4).
    - Pull real numbers, quotes, artifacts, and screenshots from user input or workspace files. Mark missing facts explicitly instead of inventing placeholder figures.
-2. **Align visual direction & motion intensity before scripting (Mandatory)**
-   - Before writing `BEATS` or CSS, synthesize the topic's subject matter, audience, and tone, then propose **2–3 genuinely distinct visual world directions** (never three color variations of the same layout).
-   - For each direction, specify four concrete elements:
-     - **Spatial metaphor**: What physical or conceptual world the `1920×1080` stage inhabits.
-     - **Surface & palette**: Ground tone, ink contrast, and 1–2 purposeful accents derived from real artifacts.
-     - **Typography voice**: Display/serif/sans/mono pairing with offline system fallbacks.
-     - **Visual signature**: One recurring structural motif or camera grammar unique to the topic.
-   - Recommend one of the **3 Motion Intensity Tiers** (`Measured`, `Choreographed`, or `Kinetic`) suited to the story and delivery mode.
-   - Ask the user once to pick, combine, or adjust the visual direction and motion intensity before building. Skip this confirmation only if the user explicitly says "decide for me" (or equivalent) or in automated headless runs—in which case state your chosen visual direction and tier clearly before proceeding.
-   - Read [references/craft-and-direction.md](references/craft-and-direction.md) for direction crafting, motion tiers, and the intra-beat choreography vocabulary.
-3. **Author `BEATS`, choreograph timelines, and build the `1920×1080` stage**
+2. **Align visual direction, structural archetype & motion tier before scripting (Mandatory)**
+   - Before crafting assets or writing `BEATS`, synthesize the topic, audience, and tone, then propose **2–3 genuinely distinct visual world directions** (never three color variations of one card layout).
+   - For each direction, specify five concrete elements: **Spatial metaphor**, **Surface & palette**, **Typography voice** (with offline system fallbacks), **Visual signature**, and **Primary card-free composition archetype**, plus a recommended **Motion Intensity Tier** (`Measured`, `Choreographed`, or `Kinetic`).
+   - Ask the user once to pick, combine, or adjust before building. Skip asking only if told "decide for me" or in automated headless runs—state the chosen direction, archetype, and tier clearly upfront. Read [references/craft-and-direction.md](references/craft-and-direction.md).
+3. **Hero Asset Craft & Fidelity Pass (Mandatory before deck assembly)**
+   - Never draw hero visuals hastily inline while writing 2,500 lines of deck code. Craft and inspect focal assets first:
+   - **Route A — Real Product, Game, or Physical Assets** (software, websites, games, hardware):
+     - Gather or capture genuine high-res screenshots, renders, or photographs first; stage them large (`65–85%` of `#stage`) with crisp framing and hairline callouts. Never replace a real product or game screen with crude CSS/SVG wireframes.
+   - **Route B — Zero-Screenshot Proposals, Coursework & Concept Talks** (when no product exists yet):
+     - Pick one of **4 zero-screenshot high-craft visual routes**:
+       1. **Architectural / Physical Cross-Section Illustration** using SVG `<pattern>` halftone/hatching, layered depths, and contextual micro-props.
+       2. **Expressive Multi-Gradient Animated Character / Mascot** staged on a pure uncluttered canvas.
+       3. **Tactile Conceptual Artifact** (realistic printed dossier, ledger, ticket, or instrument with realistic paper texture and crisp micro-typography).
+       4. **Editorial Full-Stage Data Visualization** (charts/timelines driving the whole stage, never trapped inside dashboard cards).
+   - **3-Layer Fidelity Bar** (every bespoke SVG/visual asset must satisfy ALL three before assembly):
+     1. **Accurate Silhouette & Structure**: Domain-authentic proportions, never generic rectangles + circles.
+     2. **Materiality & Shading Layer**: SVG `<pattern>` halftone dots/hatching, multi-stop gradients, paper grain, radial atmosphere, or depth shadows.
+     3. **Secondary Micro-Details**: Environmental context props, scale ticks, rivets/annotations, browser favicons/tabs, or architectural trim.
+   - **Standalone Gate**: Render and inspect hero assets visually at `1920×1080` BEFORE assembling `BEATS` and writing deck choreography.
+4. **Author `BEATS`, choreograph timelines, and build the `1920×1080` stage**
    - Script `BEATS` with one idea and one visual transformation per beat, speakable `say` lines, and `pdfSkip: true` on intermediate micro-steps.
-   - Implement `at(ms, fn, { liveOnly })` timelines for intra-beat choreography and keep inactive beat elements cleanly hidden (`display: none`, `visibility: hidden`, or `opacity: 0`) so automated layout checks inspect only active content.
-4. **Wire the `window.__beatdeck` v1.0 contract**
-   - Implement `#stage` aspect-fit scaling, query params (`?p=N`, `?still`, `?video`, `?bare`), `document.body.dataset.ready = "1"` after `document.fonts.ready` (with timeout fallback), `window.__beatdeck` (`version`, `meta`, `list()`, `current()`, `goTo(index)`, `setSubtitle(text)`), `at()` `?still` convergence, and live controls (`ArrowRight`/`Space`/`PageDown`/right-75% click, `ArrowLeft`/`PageUp`/`Backspace`/left-25% click, `Home`/`End`, `F`, `N`, `C`).
-   - Read [references/stage-contract.md](references/stage-contract.md) for exact signatures and the reference skeleton including `at()`. Inspect [examples/beatdeck-intro/deck.html](examples/beatdeck-intro/deck.html) for a complete working showcase.
-5. **Run headless lint and three-perspective review before shipping**
-   - Resolve `<skill-dir>` (the directory containing this `SKILL.md`). If `<skill-dir>/node_modules/` is missing, run one-time setup: `cd <skill-dir> && npm install && npx playwright install chromium`.
-   - From the user's workspace, run `node <skill-dir>/scripts/lint.mjs <path/to/deck.html>` and fix every failure until exit status is `0`.
-   - Review sequentially from three angles:
-     - **Audience**: Step through `?still&p=1..N` cold; confirm each visual change communicates clearly without presenter rescue.
-     - **Speaker**: Read exported `say` lines aloud at natural cadence (`3.6` CJK chars/s or `2.5` Latin words/s); toggle `C` if recording PiP to verify the `400×300` bottom-right zone is clear.
-     - **Fact & Layout Lint**: Confirm every claim matches verified sources and `lint.mjs` passes cleanly.
-6. **Export deliverables**
-   - Generate script Markdown, PDFs, offline share HTML, or 60fps MP4 from the user's workspace via `node <skill-dir>/scripts/<tool>.mjs <path/to/deck.html> --out <output-path>`. Read [references/export-and-recording.md](references/export-and-recording.md) for default output paths, CLI flags, and `--plan` timing schemas.
+   - Implement `at(ms, fn, { liveOnly })` timelines and keep inactive beat elements cleanly hidden (`display: none`, `visibility: hidden`, or `opacity: 0`) so automated layout checks inspect only active content.
+5. **Wire the `window.__beatdeck` v1.0 contract**
+   - Implement `#stage` scaling, `?p=N`/`?still`/`?video`/`?bare`, `document.body.dataset.ready = "1"` after `document.fonts.ready` (with timeout fallback), `window.__beatdeck` (`version`, `meta`, `list()`, `current()`, `goTo(index)`, `setSubtitle(text)`), `at()` `?still` convergence, and live controls (`ArrowRight`/`Space`/`PageDown`/right-75% click, `ArrowLeft`/`PageUp`/`Backspace`/left-25% click, `Home`/`End`, `F`, `N`, `C`).
+   - Read [references/stage-contract.md](references/stage-contract.md) and inspect [examples/beatdeck-intro/deck.html](examples/beatdeck-intro/deck.html).
+6. **Run headless lint and three-perspective review before shipping**
+   - Resolve `<skill-dir>` (if `<skill-dir>/node_modules/` is missing, run `cd <skill-dir> && npm install && npx playwright install chromium`). Run `node <skill-dir>/scripts/lint.mjs <path/to/deck.html>` until exit status is `0`.
+   - Review sequentially via **Audience** (`?still&p=1..N` cold check, zero card-shell monotony), **Speaker** (read `say` aloud at `3.6` CJK chars/s or `2.5` Latin words/s; toggle `C` for PiP clearance), and **Fact & Layout Lint**.
+7. **Export deliverables**
+   - Generate script Markdown, PDFs, offline share HTML, or 60fps MP4 via `node <skill-dir>/scripts/<tool>.mjs <path/to/deck.html> --out <output-path>`. Read [references/export-and-recording.md](references/export-and-recording.md).
 
 ## Runtime Contract & Controls (`window.__beatdeck` v1.0)
 
@@ -107,7 +119,7 @@ Every deck implements a minimal shared interface so all tools work regardless of
 | `#stage` | `1920×1080` logical pixel container, centered and aspect-fit scaled into the viewport. |
 | Ready signal | Wait for `document.fonts.ready` (with a bounded timeout fallback), render initial beat, then set `document.body.dataset.ready = "1"`. |
 | `?p=N` | Jump to 1-based beat `N` (clamped `1..BEATS.length`). |
-| `?still` | Add class `still` on `body`, disable all CSS transitions/animations, settle non-`liveOnly` `at()` steps synchronously, hide chrome/notes/camera/subtitles. |
+| `?still` | Add class `still` on `body`, disable CSS transitions/animations, settle non-`liveOnly` `at()` steps synchronously, hide chrome/notes/camera/subtitles. |
 | `?video` | Add class `video` on `body`, hide chrome/notes/camera, keep `#stage` and `#subtitle` visible. |
 | `?bare` | Add class `bare` on `body`, hide chrome/notes/camera **and** `#subtitle` (combine `?still&bare` for storyboards). |
 | Global API | `window.__beatdeck` exposes `version: "1.0"`, `meta`, `list()`, `current()`, `goTo(index)`, and `setSubtitle(text)`. |
@@ -128,7 +140,7 @@ Resolve `<skill-dir>` (the folder containing this `SKILL.md`), ensure `<skill-di
 
 ## References & Examples
 
-- [references/craft-and-direction.md](references/craft-and-direction.md) — Visual direction proposals, motion intensity tiers, intra-beat choreography, storytelling, typography & review gate.
+- [references/craft-and-direction.md](references/craft-and-direction.md) — Direction proposals, card-free composition archetypes, hero asset craft pass, motion tiers, storytelling & review gate.
 - [references/stage-contract.md](references/stage-contract.md) — Exact `window.__beatdeck` v1.0 specification, URL query modes, `at()` timer pattern, controls, and linting hooks.
 - [references/export-and-recording.md](references/export-and-recording.md) — Detailed CLI usage for [scripts/lint.mjs](scripts/lint.mjs), [scripts/script-export.mjs](scripts/script-export.mjs), [scripts/pdf-export.mjs](scripts/pdf-export.mjs), [scripts/bundle-share.mjs](scripts/bundle-share.mjs), and [scripts/record-video.mjs](scripts/record-video.mjs).
 - [examples/beatdeck-intro/deck.html](examples/beatdeck-intro/deck.html) — Working 12-beat showcase implementing the full contract and intra-beat choreography.
