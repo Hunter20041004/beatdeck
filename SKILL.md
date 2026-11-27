@@ -15,14 +15,20 @@ A deck is a short directed film on one `1920×1080` stage. Every deck invents it
 2. **One idea, one visual change per beat.** Open on a concrete human scene or friction before metrics or architecture. Write for the audience and leave out internal repo names, file paths, and jargon they don't need.
 3. **Direct inside the beat.** Sequence steps with `at(ms, fn, { liveOnly })`, carry persistent protagonists across beats, and pick one motion tier: `Measured`, `Choreographed`, or `Kinetic`. Every non-`liveOnly` step settles synchronously under `?still`, so snapshots, lint, and PDFs see the final frame.
 4. **Real material, never invented facts.** Use real numbers, quotes, screenshots, and captures. Mark missing facts explicitly instead of inventing placeholders.
-5. **Verify by looking, not by assuming.** Lint and render snapshots, then actually inspect the PNGs before calling a deck done.
+5. **No AI tells, visual or verbal.** AI-looking decks come from unexamined defaults:
+   - **Visual:** purple-blue gradients, frosted glass, emoji icons, text walls, "Agenda" / "Thank you" slides.
+   - **English copy:** stock phrases (*seamless*, *unlock the potential*, *in today's fast-paced world*), "not X, but Y" framing, em-dash and exclamation density.
+   - **Chinese copy:** 套話 such as 賦能、助力、打造極致體驗、在當今…時代; 「不是…而是…」; 簡體字 or 大陸用語 in a Taiwan deck.
+
+   Every word and pixel must be traceable to this subject, audience, and speaker. Read [references/ai-tells.md](references/ai-tells.md) before writing copy.
+6. **Verify by looking, not by assuming.** Lint and render snapshots, then actually inspect the PNGs before calling a deck done.
 
 ## Workflow
 
 Follow this order; each step gates the next.
 
 1. **Gather.** Confirm the audience and the outputs needed (live talk, webcam PiP, share HTML, PDF, MP4). Pull real material from the user and the workspace.
-2. **Align the direction (ask once).** Propose 2–3 *genuinely different* visual worlds. For each, give the spatial metaphor, surface & palette, typography voice (with offline CJK/Latin fallbacks), visual signature, primary archetype, and recommended motion tier. Ask the user to pick, combine, or tweak. Skip asking only when told "decide for me" or when running non-interactively, and then state the chosen direction upfront. See [references/craft-and-direction.md](references/craft-and-direction.md).
+2. **Align the direction (ask once).** Propose 2–3 *genuinely different* visual worlds. For each, give the spatial metaphor, surface & palette, typography voice (with offline CJK/Latin fallbacks), visual signature, primary archetype, recommended motion tier, and **copy voice** (who is speaking, in what register, and words this speaker would never use). Ask the user to pick, combine, or tweak. Skip asking only when told "decide for me" or when running non-interactively, and then state the chosen direction upfront. See [references/craft-and-direction.md](references/craft-and-direction.md).
 3. **Craft hero assets first.** Build focal visuals *before* writing the deck.
    - **Route A, real product/game/hardware:** capture genuine high-res screens or photos and stage them at 65–85% of the stage with hairline callouts. Never substitute CSS/SVG wireframes.
    - **Route B, nothing to screenshot:** build one high-craft route: architectural cross-section, multi-gradient character, tactile artifact, or full-stage editorial data viz.
@@ -33,11 +39,18 @@ Follow this order; each step gates the next.
    - Fill `BEATS` with speakable `say` lines, using `pdfSkip: true` on intermediate micro-steps.
    - Write each beat's choreography in `CHOREO[id]` using the provided `at`, `animate`, `draw`, `countUp`, and `typewriter` helpers.
    - Lock intended line breaks with `<br>` / `data-expected-lines="K"`.
-5. **Lint until clean.** Run `lint.mjs <deck.html> --strict`; use `--json` when parsing the output. Errors cover overflow, unexpected wraps, broken images, runtime errors, and contract violations. Craft warnings cover the card shell, nested cards, emoji, text collisions, repeated layouts, and leftover skeleton scenes. Fix them, or mark a genuinely intentional case with `data-lint-allow="<type>"`.
+   - Write headlines as claims, not topic labels. Every number needs a source; mark anything missing as `[missing: …]` and ask the user instead of inventing it. Set `META.lang` (e.g. `zh-Hant`) so the language-specific checks run.
+5. **Lint until clean.** Run `lint.mjs <deck.html> --strict`; use `--json` when parsing the output. Errors cover overflow, unexpected wraps, broken images, runtime errors, and contract violations. Craft warnings cover:
+   - **Layout:** the card shell, nested cards, text collisions, repeated layouts, and leftover skeleton scenes.
+   - **AI-tell visuals:** AI gradients, gradient text, frosted glass, text density, bullet stacks, and label headlines.
+   - **AI-tell wording,** checked on stage *and* in `say`: stock phrases, contrast frames, em dashes, exclamation marks, placeholders, narration that repeats the slide, and 簡體字, 大陸用語 and half-width punctuation in Chinese.
+
+   Fix them by rewriting, not by synonym-swapping. Mark a genuinely intentional case with `data-lint-allow="<type>"` on stage or `META.lintAllow` for narration.
 6. **Three-lens review.** Run `snapshot.mjs <deck.html>` and open `contact-sheet.png` and any doubtful `beat-NN.png`.
    - **Audience:** a cold read that also checks archetype variety.
    - **Speaker:** read the `say` lines aloud at 3.6 CJK chars/s or 2.5 Latin words/s, and toggle `C` to confirm the PiP corner stays clear.
    - **Fact & layout:** every number is sourced, and lint is clean.
+   - Then run the five-question human checklist in [references/ai-tells.md](references/ai-tells.md) §6 (swap, source, speaker, glance, claim). Lint cannot judge whether a deck says something specific.
 7. **Export** what was asked for (table below). See [references/export-and-recording.md](references/export-and-recording.md).
 
 ## Beat Data (single source of truth)

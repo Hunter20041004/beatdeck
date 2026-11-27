@@ -15,6 +15,19 @@
 | **單一資料來源** | 投影片與講稿分開寫，改完就不同步 | 只能輸出影片，無法直接上台簡報 | 同一份 HTML 同時產出現場簡報、備忘錄、講稿、PDF、分享檔與 MP4 |
 | **執行環境** | 辦公軟體或雲端簡報服務 | Node + 打包器 + React 生態系 | 純原生 HTML/CSS/JS ＋ Playwright Chromium（輸出 MP4 時另需 `ffmpeg`） |
 
+### v1.4 新增亮點：AI 痕跡防護
+
+- **整理成冊的「AI 簡報通病」清單**：[`references/ai-tells.md`](references/ai-tells.md) 涵蓋：
+  - **視覺**：紫藍漸層、毛玻璃、emoji 圖示、文字牆、「議程／謝謝聆聽」頁
+  - **內容結構**：查無出處的數字、虛構人物、講稿照念投影片
+  - **英文用字**：套話與「not X, but Y」句型
+  - **中文用字**：賦能、助力、打造極致體驗等套話，以及「不是…而是…」對比腔
+  - **台灣在地化**：簡體字混入、大陸用語、全形標點
+
+  每一條都附上「改成怎麼做」。
+- **lint 直接把關**：新增 15 種警告，同時檢查畫面文字與每一拍的 `say` 講稿；示範簡報本身也已修到能通過 `--strict`。
+- **「文字口吻」納入視覺方向提案**：提案時要說明由誰來講、用什麼語氣、哪些詞絕對不說；審查最後還有 5 題人工檢查（替換、出處、講者、一眼、主張），補上 lint 判斷不了的部分。
+
 ### v1.3 新增亮點
 
 - **做完要「看得到」**：新增 `snapshot.mjs`，把每一拍輸出成 PNG 並拼成附標籤的 `contact-sheet.png` 總覽圖；`--raw` 可單獨渲染主視覺頁面，讓「主視覺獨立檢查」與「觀眾視角審查」真的有圖可看，不再靠想像。
@@ -155,6 +168,7 @@ node ./scripts/bundle-share.mjs examples/beatdeck-intro/deck.html --out /tmp/bea
 
 - `SKILL.md` — AI Agent Skill 核心指引與工作流程
 - `references/craft-and-direction.md` — 無卡片視覺構圖、主視覺精雕關卡、節拍敘事、字體斷行控制與三視角審查規範
+- `references/ai-tells.md` — 視覺與用字的 AI 痕跡清單（英文＋繁體中文）、改寫範例與人工檢查清單
 - `references/stage-contract.md` — `window.__beatdeck` v1.0 執行期介面規範
 - `references/export-and-recording.md` — CLI 參數細節與自訂 `--plan` 時間表格式
 - `scripts/` — 骨架產生器、Chromium 檢查器、快照與總覽圖、講稿匯出、PDF 匯出、單檔打包與 60fps 錄影工具

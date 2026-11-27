@@ -15,6 +15,7 @@ Each proposal must inhabit a different physical or conceptual world—never thre
 3. **Typography Voice**: Display/serif/sans/mono pairing tuned to the subject (with realistic CJK/Latin system fallbacks for offline headless rendering).
 4. **Visual Signature**: One recurring structural motif or camera move that belongs uniquely to this topic (e.g., a vertical day/night split line, a continuous ledger spine, a zooming microscope reticle).
 5. **Primary Card-Free Archetype**: Which structural composition archetype(s) from Section 3 anchor the deck without falling back on boxed cards.
+6. **Copy Voice**: Who is speaking, in what register (plain-spoken engineer, editorial narrator, founder pitching), and a short list of words this speaker would never say. Draw the banned list from [ai-tells.md](ai-tells.md) plus anything the user's industry overuses.
 
 ### Alignment Protocol
 - Present the 2–3 directions side by side, highlight which one you recommend (and which Motion Intensity Tier fits best), and ask the user **once** to pick, combine, or tweak before you start crafting hero assets.
@@ -70,6 +71,7 @@ Reject this shell outright. Let content breathe directly on the canvas and vary 
 - Three-column icon grids with generic bullet summaries.
 - Emoji characters used as UI icons or badges—draw crisp inline SVGs or typographic markers instead.
 - Repeating the same split layout on consecutive beats.
+- Frosted-glass panels, gradient-filled headline text, "Agenda" and "Thank you / Q&A" slides, and text walls. The full visual and wording catalog, including Traditional Chinese 套話 and Taiwan localization, is in [ai-tells.md](ai-tells.md).
 
 ---
 

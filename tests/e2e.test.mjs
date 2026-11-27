@@ -121,6 +121,59 @@ function buildCraftWarningFixtureHtml() {
 </html>`;
 }
 
+function buildAiTellFixtureHtml() {
+  const words = Array.from({ length: 7 }, (_, i) =>
+    `<li>Item ${i + 1} covers regional quarterly figures across every market segment we track</li>`
+  ).join('');
+  return `<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<style>
+  html, body { margin: 0; }
+  #stage { position: relative; width: 1920px; height: 1080px; background: #f4f1ea; overflow: hidden; font: 28px/1.3 sans-serif; }
+  .beat { display: none; position: absolute; inset: 0; }
+  .beat.on { display: block; }
+  .grad { position: absolute; left: 0; top: 0; width: 1920px; height: 200px; background: linear-gradient(90deg, #6d28d9, #2563eb); }
+  h1 { position: absolute; left: 100px; top: 260px; margin: 0; font-size: 120px; background: linear-gradient(90deg, #7c3aed, #db2777); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .glass { position: absolute; top: 500px; width: 400px; height: 200px; backdrop-filter: blur(12px); background: rgba(255,255,255,0.3); }
+  .copy { position: absolute; left: 100px; top: 760px; width: 1700px; }
+  ul { position: absolute; left: 100px; top: 80px; width: 1700px; margin: 0; }
+  .copy2 { position: absolute; left: 100px; top: 760px; width: 1700px; }
+</style>
+</head>
+<body>
+  <div id="stage">
+    <div class="beat on">
+      <div class="grad"></div>
+      <h1>議程</h1>
+      <div class="glass" style="left:100px">A</div><div class="glass" style="left:600px">B</div>
+      <p class="copy">在當今數位時代，我們以AI賦能團隊,打造極致體驗。这个視頻很棒——真的</p>
+    </div>
+    <div class="beat">
+      <ul>${words}</ul>
+      <p class="copy2">Quarterly revenue grew in every region we measured this year. TODO 不僅省時，更省錢 — Done! <span data-lint-allow="ai-phrase">我們的賦能方案</span></p>
+    </div>
+  </div>
+  <script>
+    let cur = 0;
+    window.__beatdeck = {
+      version: '1.0',
+      meta: { title: 'AI Tells', lang: 'zh-Hant', width: 1920, height: 1080 },
+      list: () => [
+        { index: 0, id: 'one', say: '這不是工具，而是夥伴！' },
+        { index: 1, id: 'two', say: "Quarterly revenue grew in every region we measured this year, let's delve in." },
+      ],
+      current: () => cur,
+      goTo: (i) => { cur = i; document.querySelectorAll('.beat').forEach((b, k) => b.classList.toggle('on', k === i)); },
+      setSubtitle: () => {},
+    };
+    document.body.dataset.ready = '1';
+  </script>
+</body>
+</html>`;
+}
+
 function buildRegressionFixtures(tmpDir) {
   const regDir = path.join(tmpDir, 'regression');
   fs.mkdirSync(regDir, { recursive: true });
@@ -525,6 +578,35 @@ async function runTests() {
     assert.notEqual(badOverride.status, 0);
     assert.match(badOverride.stderr, /BEATDECK_CHROMIUM points to a missing file/);
     console.log('   v1.3 tooling tests passed.');
+
+    // 10) AI-tell checks: visual defaults + EN/zh-Hant wording on stage and in narration
+    console.log('10) Running AI-tell lint tests...');
+    const aiPath = path.join(tmpDir, 'ai-tells.html');
+    fs.writeFileSync(aiPath, buildAiTellFixtureHtml(), 'utf8');
+    const aiLint = runNode('scripts/lint.mjs', [aiPath, '--json']);
+    assert.equal(aiLint.status, 0, 'AI-tell warnings alone must not fail lint without --strict');
+    const aiWarnings = JSON.parse(aiLint.stdout).warnings;
+    const aiTypes = new Set(aiWarnings.map((w) => w.type));
+    for (const t of [
+      'ai-gradient', 'gradient-text', 'glassmorphism', 'label-headline', 'ai-phrase', 'zh-punct',
+      'zh-variant', 'zh-term', 'contrast-frame', 'exclamation', 'em-dash', 'bullet-stack',
+      'text-density', 'read-aloud', 'placeholder',
+    ]) {
+      assert.ok(aiTypes.has(t), `expected ${t} warning, got ${[...aiTypes].join(', ')}`);
+    }
+    assert.ok(
+      aiWarnings.some((w) => w.type === 'ai-phrase' && /beat 2\/2 \(two\) say/.test(w.beat) && /delve/.test(w.message)),
+      'narration ai-phrase must be reported against the say line'
+    );
+    assert.ok(
+      !aiWarnings.some((w) => w.type === 'ai-phrase' && /beat 2\/2 \(two\) stage/.test(w.beat)),
+      'data-lint-allow="ai-phrase" must exempt the stage span'
+    );
+    const aiStrict = runNode('scripts/lint.mjs', [aiPath, '--strict']);
+    assert.notEqual(aiStrict.status, 0, 'lint --strict must fail on AI tells');
+    const demoStrict = runNode('scripts/lint.mjs', [DEMO_DECK, '--strict']);
+    assert.equal(demoStrict.status, 0, `demo deck must pass --strict:\n${demoStrict.stderr}`);
+    console.log('   AI-tell lint tests passed.');
 
     console.log('ALL E2E TESTS PASSED');
   } finally {

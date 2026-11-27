@@ -59,8 +59,22 @@ Craft **warnings** (printed as `WARN`, fatal only with `--strict`):
 | `text-collision` | Glyph boxes from two different text nodes overlap (> 2px horizontally and > 35% of the smaller line height). |
 | `layout-repeat` | Two consecutive beats share the same boxed-layout fingerprint (≥ 2 boxes, 60px grid). |
 | `skeleton` | A `[data-beatdeck-skeleton]` placeholder from `new-deck.mjs` is still visible. |
+| `ai-gradient` / `gradient-text` | A CSS gradient with ≥ 2 saturated stops in the blue–violet–pink range (hue spread ≥ 25°), or gradient-filled text. |
+| `glassmorphism` | ≥ 2 `backdrop-filter: blur()` panels on one beat. |
+| `text-density` | > 80 word-equivalents on stage (Latin words + CJK chars ÷ 2; ignores SVG art and text under 14px). |
+| `bullet-stack` | ≥ 6 visible `<li>` on one beat. |
+| `label-headline` | The largest text on the beat is a topic label (Agenda, Overview, Thank you, Q&A, 議程, 謝謝聆聽…). |
+| `ai-phrase` | Stock LLM phrasing in stage text or `say` (English and Chinese lists in `scripts/lib/copy-rules.mjs`). |
+| `placeholder` | TODO, TBD, XX%, `[Company]`, lorem ipsum, John Doe, Acme, 某某, 〇〇. |
+| `read-aloud` | ≥ 70% of a beat's `say` 4-grams are printed on stage. |
+| `contrast-frame` | "Not X, but Y" / 「不是…而是…」 framing on 2+ beats (deck-level). |
+| `em-dash` / `exclamation` | More than one em dash per four beats, or one exclamation run per six beats (deck-level). |
+| `zh-punct` | Half-width `,.;:!?` between CJK characters (any `zh*` lang). |
+| `zh-variant` / `zh-term` | Simplified-only characters or Mainland vocabulary when `lang` is `zh-Hant`/`zh-TW`/`zh-HK`/`zh-MO`. |
 
-Exempt a deliberate case with `data-lint-allow="<type> [<type>…]"` on the smallest enclosing element.
+Wording checks run on every visible stage text node *and* on each beat's `say`. Warnings in narration are labelled `beat N (id) say`; deck-level ones are labelled `deck`. The rationale and the human checklist behind these rules are in [ai-tells.md](ai-tells.md).
+
+Exempt a deliberate case with `data-lint-allow="<type> [<type>…]"` on the smallest enclosing element, or for narration deck-wide with `meta.lintAllow: ["<type>"]`.
 
 - `--json` prints `{ pass, beats, strict, errors: [{beat,type,message}], warnings: [...] }` to stdout (or `{ pass: false, fatal }` when the deck cannot load). Parse this instead of scraping text.
 - Exits `0` when every beat passes (warnings allowed unless `--strict`); exits `1` with per-beat diagnostics otherwise.

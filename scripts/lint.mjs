@@ -1,4 +1,12 @@
 import { parseCliArgs, resolveDeckUrl, waitForDeckReady, withPage } from './lib/browser.mjs';
+import {
+  checkText,
+  countContrastFrames,
+  countEmDashes,
+  countExclamations,
+  isLabelHeadline,
+  narrationOverlap,
+} from './lib/copy-rules.mjs';
 
 function printUsage() {
   console.error('Usage: node scripts/lint.mjs <deck.html> [--json] [--strict]');
@@ -302,7 +310,107 @@ async function inspectActiveBeat(page) {
       }
     }
 
-    const skeletonLeft =Array.from(stage.querySelectorAll('[data-beatdeck-skeleton]')).find((el) => isVisibleInStage(el));
+    // AI-default visual treatments: purple-blue gradients, gradient text, glassmorphism
+    function parseColors(str) {
+      const out = [];
+      const re = /rgba?\(([^)]+)\)/g;
+      let m;
+      while ((m = re.exec(str))) {
+        const p = m[1].split(/[ ,/]+/).filter(Boolean).map(Number);
+        if (p.length >= 3 && (p.length < 4 || p[3] > 0.15)) out.push(p.slice(0, 3));
+      }
+      return out;
+    }
+    function hsl([r, g, b]) {
+      r /= 255; g /= 255; b /= 255;
+      const max = Math.max(r, g, b), min = Math.min(r, g, b);
+      const l = (max + min) / 2;
+      if (max === min) return { h: 0, s: 0, l };
+      const d = max - min;
+      const s2 = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+      let h;
+      if (max === r) h = (g - b) / d + (g < b ? 6 : 0);
+      else if (max === g) h = (b - r) / d + 2;
+      else h = (r - g) / d + 4;
+      return { h: h * 60, s: s2, l };
+    }
+    function isAiGradient(bgImage) {
+      if (!/gradient\(/.test(bgImage)) return false;
+      const cols = parseColors(bgImage).map(hsl).filter((c) => c.s > 0.4 && c.l > 0.2 && c.l < 0.85);
+      const cool = cols.filter((c) => c.h >= 200 && c.h <= 330);
+      if (cool.length < 2) return false;
+      const hs = cool.map((c) => c.h);
+      return Math.max(...hs) - Math.min(...hs) >= 25;
+    }
+    let glassCount = 0;
+    let aiGradientEl = null;
+    let gradientTextEl = null;
+    for (const el of allElements) {
+      if (el.closest('svg') && el.tagName.toLowerCase() !== 'svg') continue;
+      if (!isVisibleInStage(el)) continue;
+      const st = getComputedStyle(el);
+      const bg = st.backgroundImage || '';
+      const clip = st.backgroundClip || st.webkitBackgroundClip || '';
+      if (/gradient\(/.test(bg) && /text/.test(clip) && !allows(el, 'gradient-text') && !gradientTextEl) gradientTextEl = el;
+      if (!aiGradientEl && !allows(el, 'ai-gradient') && isAiGradient(bg)) aiGradientEl = el;
+      const bf = st.backdropFilter || st.webkitBackdropFilter || '';
+      if (/blur\(/.test(bf) && !allows(el, 'glassmorphism')) glassCount += 1;
+    }
+    if (!aiGradientEl && isAiGradient(getComputedStyle(stage).backgroundImage || '')) aiGradientEl = stage;
+    if (aiGradientEl) {
+      warnings.push({ type: 'ai-gradient', message: `Purple-blue "AI default" gradient on ${describeEl(aiGradientEl)}; derive color from the subject instead` });
+    }
+    if (gradientTextEl) {
+      warnings.push({ type: 'gradient-text', message: `Gradient-filled text on ${describeEl(gradientTextEl)}; use one solid ink` });
+    }
+    if (glassCount >= 2) {
+      warnings.push({ type: 'glassmorphism', message: `${glassCount} frosted-glass (backdrop blur) panels on one beat` });
+    }
+
+    // Copy extraction for wording checks (run in Node), density and bullet stacks
+    const segments = [];
+    let cjkCount = 0;
+    let latinWords = 0;
+    let topFont = 0;
+    let topEl = null;
+    const segWalker = document.createTreeWalker(stage, NodeFilter.SHOW_TEXT);
+    let sn;
+    while ((sn = segWalker.nextNode())) {
+      const v = (sn.nodeValue || '').replace(/\s+/g, ' ').trim();
+      if (!v) continue;
+      const p = sn.parentElement;
+      if (!p || ['SCRIPT', 'STYLE', 'NOSCRIPT'].includes(p.tagName)) continue;
+      if (p.closest('#subtitle') || !isVisibleInStage(p)) continue;
+      const host = p.closest('[data-lint-allow]');
+      const allowList = host ? host.getAttribute('data-lint-allow').split(/[\s,]+/).filter(Boolean) : [];
+      segments.push({ text: v, allow: allowList });
+      const logicalFont = (parseFloat(getComputedStyle(p).fontSize) || 0);
+      if (!allowList.includes('text-density') && !p.closest('svg') && logicalFont >= 14) {
+        cjkCount += (v.match(/[㐀-鿿぀-ヿ]/g) || []).length;
+        latinWords += (v.replace(/[㐀-鿿぀-ヿ]/g, ' ').match(/[A-Za-z0-9]+(?:['’.-][A-Za-z0-9]+)*/g) || []).length;
+      }
+      const fs = parseFloat(getComputedStyle(p).fontSize) || 0;
+      if (fs > topFont) { topFont = fs; topEl = p; }
+    }
+    const load = latinWords + cjkCount / 2;
+    if (load > 80) {
+      warnings.push({
+        type: 'text-density',
+        message: `~${Math.round(load)} word-equivalents on stage (${latinWords} words + ${cjkCount} CJK chars); move detail into the narration`,
+      });
+    }
+    const lis = allElements.filter((el) => el.tagName === 'LI' && isVisibleInStage(el) && !allows(el, 'bullet-stack'));
+    if (lis.length >= 6) {
+      warnings.push({ type: 'bullet-stack', message: `${lis.length} visible bullet points on one beat` });
+    }
+    let headline = '';
+    if (topEl) {
+      let block = topEl;
+      while (block.parentElement && block !== stage && getComputedStyle(block).display === 'inline') block = block.parentElement;
+      if (!allows(block, 'label-headline')) headline = (block.textContent || '').replace(/\s+/g, ' ').trim();
+    }
+
+    const skeletonLeft = Array.from(stage.querySelectorAll('[data-beatdeck-skeleton]')).find((el) => isVisibleInStage(el));
     if (skeletonLeft) {
       warnings.push({ type: 'skeleton', message: `Skeleton placeholder still visible: ${describeEl(skeletonLeft)}` });
     }
@@ -316,7 +424,7 @@ async function inspectActiveBeat(page) {
       .sort()
       .join('|');
 
-    return { issues, warnings, fingerprint, boxedCount: boxed.length };
+    return { issues, warnings, fingerprint, boxedCount: boxed.length, segments, headline };
   });
 }
 
@@ -356,9 +464,12 @@ async function main() {
         if (!api || typeof api.list !== 'function' || typeof api.goTo !== 'function') {
           return null;
         }
+        const meta = api.meta || {};
         return {
           version: api.version,
           beats: api.list(),
+          lang: meta.lang || document.documentElement.lang || '',
+          lintAllow: Array.isArray(meta.lintAllow) ? meta.lintAllow : [],
         };
       });
 
@@ -370,6 +481,9 @@ async function main() {
       const warnings = [];
       let prevFingerprint = null;
       const total = apiInfo.beats.length;
+      const lang = apiInfo.lang;
+      const sayAllowed = (type) => apiInfo.lintAllow.includes(type);
+      const deckTally = { contrast: [], emDash: 0, exclaim: 0 };
 
       for (let i = 0; i < total; i += 1) {
         const beat = apiInfo.beats[i];
@@ -420,6 +534,75 @@ async function main() {
           });
         }
         prevFingerprint = inspected.boxedCount >= 2 ? inspected.fingerprint : null;
+
+        // Wording checks on on-stage copy and on the spoken `say` line
+        const say = typeof beat.say === 'string' ? beat.say : '';
+        const seen = new Set();
+        const pushOnce = (where, w) => {
+          const key = `${where}|${w.type}`;
+          if (seen.has(key)) return;
+          seen.add(key);
+          warnings.push({ beat: `${currentBeatLabel} ${where}`, ...w });
+        };
+        for (const seg of inspected.segments) {
+          for (const w of checkText(seg.text, { lang })) {
+            if (!seg.allow.includes(w.type)) pushOnce('stage', w);
+          }
+        }
+        for (const w of checkText(say, { lang })) {
+          if (!sayAllowed(w.type)) pushOnce('say', w);
+        }
+        if (/\p{Extended_Pictographic}/u.test(say) && !sayAllowed('emoji')) {
+          pushOnce('say', { type: 'emoji', message: 'Emoji inside spoken narration' });
+        }
+        const stageCopy = inspected.segments
+          .filter((seg) => !seg.allow.includes('contrast-frame'))
+          .map((seg) => seg.text)
+          .join(' ');
+        const contrastHits = countContrastFrames(stageCopy) + (sayAllowed('contrast-frame') ? 0 : countContrastFrames(say));
+        if (contrastHits > 0) deckTally.contrast.push(`${i + 1}`);
+        const dashCopy = inspected.segments.filter((seg) => !seg.allow.includes('em-dash')).map((seg) => seg.text).join(' ');
+        deckTally.emDash += countEmDashes(dashCopy) + (sayAllowed('em-dash') ? 0 : countEmDashes(say));
+        deckTally.exclaim += countExclamations(stageCopy) + (sayAllowed('exclamation') ? 0 : countExclamations(say));
+        if (inspected.headline && isLabelHeadline(inspected.headline)) {
+          pushOnce('stage', {
+            type: 'label-headline',
+            message: `Headline "${inspected.headline}" is a topic label (agenda / thank-you style); state the beat's claim instead`,
+          });
+        }
+        if (!sayAllowed('read-aloud')) {
+          const overlap = narrationOverlap(say, inspected.segments.map((seg) => seg.text).join(' '));
+          if (overlap >= 0.7) {
+            pushOnce('say', {
+              type: 'read-aloud',
+              message: `${Math.round(overlap * 100)}% of the narration is printed on stage; the speaker would be reading the slide`,
+            });
+          }
+        }
+      }
+
+      if (deckTally.contrast.length >= 2) {
+        warnings.push({
+          beat: 'deck',
+          type: 'contrast-frame',
+          message: `"Not X, but Y" / 「不是…而是…」 framing on beats ${deckTally.contrast.join(', ')}; state the point directly`,
+        });
+      }
+      const dashLimit = Math.max(1, Math.floor(total / 4));
+      if (deckTally.emDash > dashLimit) {
+        warnings.push({
+          beat: 'deck',
+          type: 'em-dash',
+          message: `${deckTally.emDash} em dashes across stage copy and narration (limit ${dashLimit}); use periods, commas or colons`,
+        });
+      }
+      const exclaimLimit = Math.max(1, Math.floor(total / 6));
+      if (deckTally.exclaim > exclaimLimit) {
+        warnings.push({
+          beat: 'deck',
+          type: 'exclamation',
+          message: `${deckTally.exclaim} exclamation marks (limit ${exclaimLimit}); let the content carry the energy`,
+        });
       }
 
       return { total, failures, warnings };

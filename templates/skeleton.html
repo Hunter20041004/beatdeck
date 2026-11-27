@@ -119,7 +119,8 @@
   "use strict";
 
   // ============ CONTENT: single source of truth ============
-  const META = { title: "{{TITLE}}", subtitle: "", lang: "{{LANG}}", width: 1920, height: 1080, speechRate: 3.6 };
+  // lintAllow: narration-wide lint exemptions, e.g. ["contrast-frame"]; see references/ai-tells.md §7.
+  const META = { title: "{{TITLE}}", subtitle: "", lang: "{{LANG}}", width: 1920, height: 1080, speechRate: 3.6, lintAllow: [] };
 
   // One idea + one visual change per beat. `cam` positions the #world camera (logical px + zoom).
   const BEATS = [

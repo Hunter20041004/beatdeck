@@ -15,6 +15,12 @@ An open-source Agent Skill and headless Chromium toolkit for crafting film-like,
 | **Single Source of Truth** | Separate speaker doc & slides drift quickly | Video-only output; no live talk mode | One HTML drives Live Talk, Notes, Script, PDF, Share HTML & MP4 |
 | **Dependencies** | Office / browser SaaS | Node + bundler + React ecosystem | Plain HTML/CSS/JS + Playwright Chromium (`ffmpeg` optional for MP4) |
 
+### What's New in v1.4: AI-Tell Guard
+
+- **A researched catalog of what makes decks look and sound machine-made**: [`references/ai-tells.md`](references/ai-tells.md) covers visual defaults (purple-blue gradients, frosted glass, emoji icons, text walls, Agenda/Thank-you slides), structure (unsourced stats, generic personas, narration that reads the slide), English stock phrasing and "not X, but Y" framing, and Traditional Chinese 套話 (賦能、助力、打造極致體驗…), 「不是…而是…」, plus Taiwan localization (簡體字, 大陸用語, 全形標點). Every entry pairs the tell with what to do instead.
+- **Lint enforces it**: 15 new warning types check visible stage text *and* every `say` line. The demo deck itself was cleaned up to pass `--strict`.
+- **Copy voice is part of the direction**: proposals now name who is speaking and which words they would never use, and review ends with a five-question human checklist (swap, source, speaker, glance, claim) for what no lint can judge.
+
 ### What's New in v1.3
 
 - **See what you ship**: `snapshot.mjs` renders every beat to PNG plus a labelled `contact-sheet.png`, and `--raw` renders a standalone hero-asset page, so the Hero Gate and the Audience review are real visual checks instead of assumptions.
@@ -155,6 +161,7 @@ node ./scripts/bundle-share.mjs examples/beatdeck-intro/deck.html --out /tmp/bea
 
 - `SKILL.md` — Core Agent Skill instructions and ordered workflow
 - `references/craft-and-direction.md` — Card-free composition archetypes, hero asset craft pass, beat storytelling, typography & review gate
+- `references/ai-tells.md` — Visual and wording AI tells (English + 繁體中文), rewrite recipes, human checklist
 - `references/stage-contract.md` — Exact `window.__beatdeck` v1.0 runtime specification
 - `references/export-and-recording.md` — CLI documentation and custom `--plan` schema
 - `scripts/` — Skeleton scaffolder, headless Chromium linter, snapshot/contact-sheet renderer, script exporter, PDF exporter, share bundler, and 60fps recorder
