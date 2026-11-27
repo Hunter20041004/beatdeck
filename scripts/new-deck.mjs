@@ -80,13 +80,14 @@ function main() {
 
   const template = fs.readFileSync(TEMPLATE, 'utf8');
   const html = template
-    .replace('"{{TITLE}}"', jsString(title))
-    .replace('"{{LANG}}"', jsString(lang))
-    .replace(/\{\{TITLE\}\}/g, escapeHtml(title))
-    .replace(/\{\{LANG\}\}/g, escapeHtml(lang))
-    .replace('/*BEATDECK:BEATS*/', beatsJs)
-    .replace('/*BEATDECK:CHOREO*/', choreoJs)
-    .replace('<!--BEATDECK:SCENES-->', scenesHtml);
+    // Function replacers so `$&`, `$$` etc. in user text are inserted literally.
+    .replace('"{{TITLE}}"', () => jsString(title))
+    .replace('"{{LANG}}"', () => jsString(lang))
+    .replace(/\{\{TITLE\}\}/g, () => escapeHtml(title))
+    .replace(/\{\{LANG\}\}/g, () => escapeHtml(lang))
+    .replace('/*BEATDECK:BEATS*/', () => beatsJs)
+    .replace('/*BEATDECK:CHOREO*/', () => choreoJs)
+    .replace('<!--BEATDECK:SCENES-->', () => scenesHtml);
 
   fs.mkdirSync(path.dirname(outPath), { recursive: true });
   fs.writeFileSync(outPath, html, 'utf8');

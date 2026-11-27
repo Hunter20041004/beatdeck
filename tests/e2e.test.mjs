@@ -546,6 +546,13 @@ async function runTests() {
     const skelScript = runNode('scripts/script-export.mjs', [skelPath]);
     assert.equal(skelScript.status, 0, skelScript.stderr);
     assert.match(skelScript.stdout, /# Skeleton <\/script> "Check"/);
+    // `$` sequences in --title must be inserted literally (no String.replace pattern expansion)
+    const dollarPath = path.join(tmpDir, 'skeleton', 'dollar.html');
+    const dollar = runNode('scripts/new-deck.mjs', [dollarPath, '--title', 'Save $$ and $& now', '--beats', '1']);
+    assert.equal(dollar.status, 0, dollar.stderr);
+    const dollarHtml = fs.readFileSync(dollarPath, 'utf8');
+    assert.ok(dollarHtml.includes('<title>Save $$ and $&amp; now</title>'), 'title tag must keep $ sequences');
+    assert.ok(dollarHtml.includes('title: "Save $$ and $& now"'), 'META.title must keep $ sequences');
 
     // 9b) craft fixture triggers card-shell, nested-card, emoji and text-collision warnings
     const craftPath = path.join(tmpDir, 'craft-warn.html');
