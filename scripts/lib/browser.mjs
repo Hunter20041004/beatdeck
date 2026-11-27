@@ -3,19 +3,89 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { chromium } from 'playwright';
 
+const INSTALL_HINT =
+  'Run `npx playwright install chromium` inside the skill directory, or set BEATDECK_CHROMIUM=/path/to/chrome.';
+
+let warnedFallback = false;
+
 /**
- * Return the executable path of Playwright's bundled Chromium.
- * Never falls back to system Chrome or hardcoded user paths.
+ * Look for another Playwright-managed Chromium revision next to the expected one
+ * (e.g. `chromium-1243/` when the installed Playwright expects `chromium-1255/`).
+ * Stays inside Playwright's own browsers cache; never touches system Chrome.
+ * @param {string} expectedPath
+ * @returns {string | null}
+ */
+function findSiblingRevision(expectedPath) {
+  const parts = expectedPath.split(path.sep);
+  const revIdx = parts.findIndex((p) => /^chromium-\d+$/.test(p));
+  if (revIdx <= 0) return null;
+  const cacheRoot = parts.slice(0, revIdx).join(path.sep) || path.sep;
+  const relInside = parts.slice(revIdx + 1);
+  let entries;
+  try {
+    entries = fs.readdirSync(cacheRoot);
+  } catch {
+    return null;
+  }
+  const candidates = entries
+    .map((name) => ({ name, rev: Number((name.match(/^chromium-(\d+)$/) || [])[1]) }))
+    .filter((e) => Number.isFinite(e.rev) && e.name !== parts[revIdx])
+    .sort((a, b) => b.rev - a.rev);
+  for (const c of candidates) {
+    const candidatePath = path.join(cacheRoot, c.name, ...relInside);
+    if (fs.existsSync(candidatePath)) return candidatePath;
+  }
+  return null;
+}
+
+/**
+ * Resolve the Chromium executable used by every Beatdeck CLI tool.
+ * Order: `BEATDECK_CHROMIUM` env override → Playwright's bundled Chromium →
+ * another Chromium revision in the same Playwright browsers cache (with a warning).
+ * Never silently falls back to a system Google Chrome install.
  * @returns {string}
  */
 export function getBrowserExecutablePath() {
-  const execPath = chromium.executablePath();
-  if (!execPath) {
-    throw new Error(
-      'Playwright Chromium executable path is unavailable. Run: npx playwright install chromium'
-    );
+  const override = process.env.BEATDECK_CHROMIUM;
+  if (override) {
+    if (!fs.existsSync(override)) {
+      throw new Error(`BEATDECK_CHROMIUM points to a missing file: ${override}`);
+    }
+    return override;
   }
-  return execPath;
+
+  let bundled = '';
+  try {
+    bundled = chromium.executablePath();
+  } catch {
+    bundled = '';
+  }
+  if (bundled && fs.existsSync(bundled)) return bundled;
+
+  const sibling = bundled ? findSiblingRevision(bundled) : null;
+  if (sibling) {
+    if (!warnedFallback) {
+      warnedFallback = true;
+      console.warn(
+        `[beatdeck] Playwright expects ${bundled} (missing); using installed revision ${sibling}. ${INSTALL_HINT}`
+      );
+    }
+    return sibling;
+  }
+
+  throw new Error(
+    `Playwright Chromium not found${bundled ? ` at ${bundled}` : ''}. ${INSTALL_HINT}`
+  );
+}
+
+/**
+ * Launch headless Chromium using the resolved executable.
+ * @param {import('playwright').LaunchOptions} [options]
+ * @returns {Promise<import('playwright').Browser>}
+ */
+export async function launchBrowser(options = {}) {
+  const executablePath = getBrowserExecutablePath();
+  return chromium.launch({ headless: true, ...options, executablePath });
 }
 
 /**
@@ -86,15 +156,8 @@ export async function withPage(url, optionsOrFn, maybeFn) {
     throw new Error('withPage requires a callback function.');
   }
 
-  const executablePath = getBrowserExecutablePath();
-  if (!fs.existsSync(executablePath)) {
-    throw new Error(
-      `Playwright bundled Chromium not found at ${executablePath}. Run: npx playwright install chromium`
-    );
-  }
-
   const targetUrl = resolveDeckUrl(url);
-  const browser = await chromium.launch({ headless: true });
+  const browser = await launchBrowser();
   let context;
   try {
     context = await browser.newContext({

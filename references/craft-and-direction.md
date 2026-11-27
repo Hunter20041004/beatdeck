@@ -100,7 +100,13 @@ Every bespoke SVG or crafted visual asset must satisfy **all three layers** befo
 3. **Secondary Micro-Details**: Environmental context props, architectural dimension ticks, scale markers, rivets/annotations, browser favicons/tabs, or foreground/background depth cues.
 
 ### Standalone Visual Gate
-Render and visually inspect the hero asset(s) on a `1920x1080` canvas **before** scripting `BEATS` and writing deck choreography. Confirm silhouette accuracy, shading materiality, secondary micro-details, and open breathing room first; only then assemble the full deck around those assets.
+Render and visually inspect the hero asset(s) on a `1920x1080` canvas **before** scripting `BEATS` and writing deck choreography:
+
+1. Put the asset alone in a scratch page (e.g. `hero.html`, `<body style="margin:0">` plus the SVG at `1920x1080`).
+2. Run `node <skill-dir>/scripts/snapshot.mjs hero.html --raw --out <dir>` and **open the PNG**.
+3. Check it against the 3-layer bar: does the silhouette read as the real thing at a glance, is there material/shading depth, are there secondary micro-details? Is there open breathing room for type?
+
+Iterate on the asset alone until it passes. Only then assemble the full deck around it.
 
 ---
 
@@ -202,6 +208,6 @@ Uncontrolled line wrapping destroys visual balance—especially when mixing CJK 
 
 Before marking a deck finished:
 
-1. **Automated Chromium Lint**: Run `node scripts/lint.mjs <deck.html>`. Confirm zero runtime errors, zero broken `<img>` tags, zero text overflowing `1920x1080`, and zero unexpected line wraps across every beat.
-2. **Audience Lens**: Step through `?still&p=1..N` (or export a storyboard PDF) without reading speaker notes. Verify each visual change clearly communicates its beat, hero visuals satisfy the 3-layer craft bar, beats avoid repetitive bordered-card shells, and no jargon leaks onto the canvas.
+1. **Automated Chromium Lint**: Run `node scripts/lint.mjs <deck.html> --strict`. Confirm zero runtime errors, zero broken `<img>` tags, zero text overflowing `1920x1080`, zero unexpected line wraps, and zero craft warnings (card shell, nested cards, emoji icons, text collisions, repeated layouts, leftover skeleton scenes) across every beat. Intentional exceptions get `data-lint-allow="<type>"` on the smallest enclosing element, never on `#stage`.
+2. **Audience Lens**: Run `node scripts/snapshot.mjs <deck.html>` and open `contact-sheet.png` first (archetype variety, rhythm, monotony at a glance), then any `beat-NN.png` that looks doubtful at full size, without reading speaker notes. Verify each visual change clearly communicates its beat, hero visuals satisfy the 3-layer craft bar, beats avoid repetitive bordered-card shells, and no jargon leaks onto the canvas.
 3. **Speaker & Fact Lens**: Read `script-export.mjs` output aloud at natural pace (`~3.6` CJK chars/s or `~2.5` Latin words/s), verify every claim and number against source material, and toggle `C` if the deck will be recorded with presenter PiP.

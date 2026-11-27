@@ -93,10 +93,14 @@ To let headless Chromium verify layout integrity on every beat:
 - **Line-wrap assertions**: Add `data-expected-lines="K"` on elements whose visual line count must not exceed `K`. Elements inside `#stage` containing `<br>` are also automatically checked (`expected = brCount + 1` unless `data-expected-lines` overrides it), and `data-lint-lines="K"` may also be used.
 - **Text containment**: Visible text nodes inside `#stage` must remain inside the `1920×1080` stage bounds (within `±1px` normalized tolerance).
 - **Image integrity**: Every visible `<img>` inside `#stage` must satisfy `img.complete && img.naturalWidth > 0`.
+- **Craft warnings**: `lint.mjs` also warns (and fails under `--strict`) on bordered/shadowed card density, card-inside-card nesting, emoji in visible text, overlapping text from different nodes, the same boxed layout on consecutive beats, and visible `[data-beatdeck-skeleton]` placeholders.
+- **Intentional exceptions**: `data-lint-allow="card-shell emoji text-collision"` (space- or comma-separated warning types) on an element exempts its subtree, e.g. a deliberate storyboard strip or an ink stamp layered over artwork.
 
 ---
 
 ## 7. Minimal Reference Skeleton (with `at()` Intra-Beat Choreography)
+
+> **Prefer the generated skeleton.** `node <skill-dir>/scripts/new-deck.mjs <deck.html> --title "…" --ids a,b,c` writes [`templates/skeleton.html`](../templates/skeleton.html) with the whole contract wired: scaling, query modes, ready signal, `#world` camera (`beat.cam`), notes drawer, PiP zone, HUD, keys/clicks, and `?still`-safe helpers `at`, `animate`, `draw`, `countUp`, `typewriter` passed to `CHOREO[beatId](sceneEl, helpers)`. It carries no visual style: replace every `DESIGN` block and `data-beatdeck-skeleton` scene. The fragments below explain the moving parts.
 
 ```html
 <style>

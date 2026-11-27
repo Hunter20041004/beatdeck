@@ -3,12 +3,11 @@ import os from 'node:os';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import {
-  getBrowserExecutablePath,
+  launchBrowser,
   parseCliArgs,
   resolveDeckUrl,
   waitForDeckReady,
 } from './lib/browser.mjs';
-import { chromium } from 'playwright';
 
 function printUsage() {
   console.error(
@@ -243,12 +242,6 @@ async function main() {
   const outPath = path.resolve(String(flags.out || defaultOut));
   fs.mkdirSync(path.dirname(outPath), { recursive: true });
 
-  const executablePath = getBrowserExecutablePath();
-  if (!fs.existsSync(executablePath)) {
-    throw new Error(
-      `Playwright bundled Chromium not found at ${executablePath}. Run: npx playwright install chromium`
-    );
-  }
 
   let tmpDir = null;
   let browser = null;
@@ -256,7 +249,7 @@ async function main() {
 
   try {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'beatdeck-pdf-'));
-    browser = await chromium.launch({ headless: true });
+    browser = await launchBrowser();
     context = await browser.newContext({
       viewport: { width: 1920, height: 1080 },
       deviceScaleFactor: 1,

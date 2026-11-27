@@ -12,12 +12,34 @@ Invoke tools from the user's workspace using `node <skill-dir>/scripts/<tool>.mj
 
 `record-video.mjs` additionally requires `ffmpeg` on `PATH` unless run with `--frames-only` (`ffprobe` is used only by `npm test` to verify encoded video streams).
 
+### Chromium Resolution
+
+Every tool launches Chromium through `scripts/lib/browser.mjs` in this order:
+
+1. `BEATDECK_CHROMIUM=/path/to/chrome` (explicit override; errors if the file is missing).
+2. Playwright's bundled Chromium for the installed `playwright` version.
+3. Another Chromium revision already present in the same Playwright browsers cache (e.g. a sandbox with a pre-installed browser one revision behind). A one-line warning names both paths.
+
+It never silently falls back to a system Google Chrome install. If nothing is found, the error tells you to run `npx playwright install chromium` or set `BEATDECK_CHROMIUM`.
+
 ---
 
-## 1. Layout & Contract Linter (`scripts/lint.mjs`)
+## 0. Skeleton Scaffold (`scripts/new-deck.mjs`)
 
 ```bash
-node <skill-dir>/scripts/lint.mjs <deck.html>
+node <skill-dir>/scripts/new-deck.mjs <out/deck.html> [--title "Deck Title"] [--lang en] [--beats 6 | --ids opening,shift,proof] [--force]
+```
+
+Writes `templates/skeleton.html` with the requested beats: a contract-complete, **style-free** deck that already passes lint errors. Each beat gets a `BEATS` entry (`TODO` chapter/say, `cam: { x, y, scale }` for the `#world` camera) and a placeholder `<section class="scene" data-beat="<id>" data-beatdeck-skeleton>`. `CHOREO[id](sceneEl, { at, animate, draw, countUp, typewriter, isStill, isVideo })` holds per-beat choreography; every helper settles to its final state under `?still`. Refuses to overwrite an existing file unless `--force`. The title is HTML- and JS-escaped safely.
+
+Lint keeps warning (`skeleton`) until every placeholder scene is replaced, so a skeleton can never ship as a finished deck under `--strict`.
+
+---
+
+## 1. Layout, Contract & Craft Linter (`scripts/lint.mjs`)
+
+```bash
+node <skill-dir>/scripts/lint.mjs <deck.html> [--strict] [--json]
 ```
 
 Loads `<deck.html>?still&p=1` at `1920×1080`, verifies `#stage` intrinsic dimensions (`1920×1080`) and `window.__beatdeck` with at least one beat, and steps through every beat (`goTo(i)`):
@@ -27,7 +49,35 @@ Loads `<deck.html>?still&p=1` at `1920×1080`, verifies `#stage` intrinsic dimen
 - **Stage containment**: Verifies visible text rectangles inside `#stage` remain within `1920×1080` logical bounds (`±1px` tolerance).
 - **Line-wrap guard**: Checks every visible element inside `#stage` that defines `data-expected-lines`, `data-lint-lines`, or contains `<br>` tags. Visual lines are clustered via `Range.getClientRects()` by vertical overlap so mixed CJK characters and large inline numbers are counted accurately. Fails if `actualLines > expectedLines`.
 
-Exits `0` when every beat passes; exits `1` with per-beat diagnostics on any failure.
+Craft **warnings** (printed as `WARN`, fatal only with `--strict`):
+
+| Type | Fires when |
+| :--- | :--- |
+| `card-shell` | ≥ 4 visible text-bearing boxes with a full border (or shadow + radius + fill), each 1.5–60% of the stage, on one beat. |
+| `nested-card` | A boxed element sits inside another boxed element. |
+| `emoji` | Visible text contains an emoji pictograph (draw an SVG or typographic mark instead). |
+| `text-collision` | Glyph boxes from two different text nodes overlap (> 2px horizontally and > 35% of the smaller line height). |
+| `layout-repeat` | Two consecutive beats share the same boxed-layout fingerprint (≥ 2 boxes, 60px grid). |
+| `skeleton` | A `[data-beatdeck-skeleton]` placeholder from `new-deck.mjs` is still visible. |
+
+Exempt a deliberate case with `data-lint-allow="<type> [<type>…]"` on the smallest enclosing element.
+
+- `--json` prints `{ pass, beats, strict, errors: [{beat,type,message}], warnings: [...] }` to stdout (or `{ pass: false, fatal }` when the deck cannot load). Parse this instead of scraping text.
+- Exits `0` when every beat passes (warnings allowed unless `--strict`); exits `1` with per-beat diagnostics otherwise.
+
+---
+
+## 1b. Visual Snapshots & Contact Sheet (`scripts/snapshot.mjs`)
+
+```bash
+node <skill-dir>/scripts/snapshot.mjs <deck.html> [--out dir] [--beats 1,3-5] [--cols 4] [--bare] [--sheet=false]
+node <skill-dir>/scripts/snapshot.mjs <hero.html> --raw [--out dir] [--wait 300]
+```
+
+Default `--out`: `<deckDir>/<name>-snapshots/`.
+
+- **Deck mode:** captures each selected beat at `?still&p=N` (add `--bare` for stage-only `?still&bare`) as `beat-NN.png` (`1920×1080`), then composes `contact-sheet.png`, a `--cols`-wide grid labelled with beat number, id, chapter, and `pdfSkip`. Prints every written path so you can open them directly. Use it for the Audience lens and after every significant visual change.
+- **`--raw` mode:** for the Hero Asset Standalone Gate. Loads any HTML page (no contract required) at `1920×1080`, waits for `load`, fonts, and `--wait` ms, and writes `<name>.png`.
 
 ---
 
