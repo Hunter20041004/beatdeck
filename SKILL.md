@@ -32,7 +32,7 @@ Follow this order; each step gates the next.
 1. **Gather.** Confirm the audience and the outputs needed (live talk, webcam PiP, share HTML, PDF, MP4). Pull real material from the user and the workspace.
 2. **Align the direction (ask once).** Propose 2–3 *genuinely different* visual worlds. For each, give the spatial metaphor, surface & palette, typography voice (with offline CJK/Latin fallbacks), visual signature, primary archetype, recommended motion tier, and **copy voice** (who is speaking, in what register, and words this speaker would never use). Ask the user to pick, combine, or tweak. Skip asking only when told "decide for me" or when running non-interactively, and then state the chosen direction upfront. See [references/craft-and-direction.md](references/craft-and-direction.md).
 3. **Craft hero assets first.** Build focal visuals *before* writing the deck.
-   - **Route A, real product/game/hardware:** capture genuine high-res screens or photos and stage them at 65–85% of the stage with hairline callouts. Never substitute CSS/SVG wireframes.
+   - **Route A, real product/game/hardware:** capture genuine high-res screens or photos and stage them at 65–85% of the stage with hairline callouts. Never substitute CSS/SVG wireframes. Crop each capture to the region the beat talks about, so the UI text in it stays readable on a projector (≥ 18px on stage).
    - **Route B, nothing to screenshot:** build one high-craft route: architectural cross-section, multi-gradient character, tactile artifact, or full-stage editorial data viz.
    - Each asset must clear the **3-layer fidelity bar**: accurate silhouette, materiality/shading, and secondary micro-details.
    - **Gate:** put the asset in its own HTML page, run `snapshot.mjs <hero.html> --raw`, and inspect the PNG before moving on.
@@ -43,7 +43,7 @@ Follow this order; each step gates the next.
    - Lock intended line breaks with `<br>` / `data-expected-lines="K"`.
    - Write headlines as plain claims that say what happens. Avoid topic labels, metaphor equations, and the clipped two-beat slogan rhythm. Every number needs a source; mark anything missing as `[missing: …]` and ask the user instead of inventing it. Set `META.lang` (e.g. `zh-Hant`) so the language-specific checks run.
 5. **Lint until clean.** Run `lint.mjs <deck.html> --strict`; use `--json` when parsing the output. Errors cover overflow, unexpected wraps, broken images, runtime errors, and contract violations. Craft warnings cover:
-   - **Layout:** the card shell, nested cards, text collisions, repeated layouts, and leftover skeleton scenes.
+   - **Layout:** the card shell, nested cards, text collisions, repeated layouts, screenshots shrunk too small to read, and leftover skeleton scenes.
    - **AI-tell visuals:** AI gradients, gradient text, frosted glass, text density, bullet stacks, and label headlines.
    - **AI-tell wording,** checked on stage *and* in `say`: stock phrases, contrast frames, metaphor equations (「X 是一場 Y」), slogan-cadence headlines (「短句，短句。」), em dashes, exclamation marks, placeholders, internal process details, narration that repeats the slide, and 簡體字, 大陸用語 and half-width punctuation in Chinese.
 

@@ -103,7 +103,7 @@ function buildCraftWarningFixtureHtml() {
 </head>
 <body>
   <div id="stage">
-    <div class="beat on" id="b0">${cards('First')}<p class="a">Headline \u{1F680}</p><p class="b">Colliding label</p></div>
+    <div class="beat on" id="b0">${cards('First')}<img alt="capture" style="position:absolute;left:1500px;top:40px;width:300px;height:169px" src="data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1600' height='900'%3E%3Crect width='1600' height='900' fill='%23ccc'/%3E%3C/svg%3E"><p class="a">Headline \u{1F680}</p><p class="b">Colliding label</p></div>
     <div class="beat" id="b1">${cards('Second')}</div>
   </div>
   <script>
@@ -553,7 +553,7 @@ async function runTests() {
     const craftLint = runNode('scripts/lint.mjs', [craftPath, '--json']);
     assert.equal(craftLint.status, 0, 'craft warnings alone must not fail lint without --strict');
     const craftTypes = new Set(JSON.parse(craftLint.stdout).warnings.map((w) => w.type));
-    for (const t of ['card-shell', 'nested-card', 'emoji', 'text-collision', 'layout-repeat']) {
+    for (const t of ['card-shell', 'nested-card', 'emoji', 'text-collision', 'layout-repeat', 'small-capture']) {
       assert.ok(craftTypes.has(t), `expected ${t} warning, got ${[...craftTypes].join(', ')}`);
     }
 

@@ -85,6 +85,7 @@ Insert a dedicated **Hero Asset Craft & Fidelity Pass** *between* Visual Directi
 *(Use for software products, websites, games, developer tools, or hardware.)*
 - Gather or capture genuine high-resolution screenshots, renders, or photographs **before** writing HTML/CSS.
 - Stage real captures large (`65–85%` of `#stage`) with crisp framing and hairline SVG callouts pointing to concrete UI or hardware details.
+- Crop to the part of the screen the beat is about. A full-window capture shrunk to a corner shows "a screenshot" but nothing the audience can read; UI text should land at ≥ 18px on stage (lint: `small-capture`).
 - **Never** substitute a crude CSS/SVG wireframe mockup when a real product screen or photograph can be captured or provided.
 
 #### Route B — Zero-Screenshot Proposals, Coursework & Concept Talks

@@ -311,6 +311,20 @@ async function inspectActiveBeat(page) {
       }
     }
 
+    // Real captures shrunk so far that the UI text inside them cannot be read on a projector
+    for (const img of imgs) {
+      if (!isVisibleInStage(img) || !img.naturalWidth || img.naturalWidth < 600) continue;
+      if (allows(img, 'small-capture')) continue;
+      const shownW = img.getBoundingClientRect().width / scale;
+      const ratio = shownW / img.naturalWidth;
+      if (ratio < 0.4) {
+        warnings.push({
+          type: 'small-capture',
+          message: `Screenshot ${img.getAttribute('src')?.split('/').pop() || describeEl(img)} is shown at ${Math.round(ratio * 100)}% of its pixel size (${Math.round(shownW)}px wide); text inside is likely unreadable. Crop tighter or enlarge`,
+        });
+      }
+    }
+
     // AI-default visual treatments: purple-blue gradients, gradient text, glassmorphism
     function parseColors(str) {
       const out = [];

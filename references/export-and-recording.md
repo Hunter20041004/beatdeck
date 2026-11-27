@@ -60,6 +60,7 @@ Craft **warnings** (printed as `WARN`, fatal only with `--strict`):
 | `layout-repeat` | Two consecutive beats share the same boxed-layout fingerprint (≥ 2 boxes, 60px grid). |
 | `skeleton` | A `[data-beatdeck-skeleton]` placeholder from `new-deck.mjs` is still visible. |
 | `ai-gradient` / `gradient-text` | A CSS gradient with ≥ 2 saturated stops in the blue–violet–pink range (hue spread ≥ 25°), or gradient-filled text. |
+| `small-capture` | A raster `<img>` ≥ 600px wide shown below 40% of its pixel size; a DPR-2 capture at that scale puts UI text under ~11px on stage. Crop tighter or enlarge. |
 | `glassmorphism` | ≥ 2 `backdrop-filter: blur()` panels on one beat. |
 | `text-density` | > 80 word-equivalents on stage (Latin words + CJK chars ÷ 2; ignores SVG art and text under 14px). |
 | `bullet-stack` | ≥ 6 visible `<li>` on one beat. |
