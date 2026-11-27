@@ -15,6 +15,15 @@ An open-source Agent Skill and headless Chromium toolkit for crafting film-like,
 | **Single Source of Truth** | Separate speaker doc & slides drift quickly | Video-only output; no live talk mode | One HTML drives Live Talk, Notes, Script, PDF, Share HTML & MP4 |
 | **Dependencies** | Office / browser SaaS | Node + bundler + React ecosystem | Plain HTML/CSS/JS + Playwright Chromium (`ffmpeg` optional for MP4) |
 
+### What's New in v1.8: Designed Beat Changes and a Clearer Flow
+
+- **Bridges.** A deck that only fades between beats looks like it never chose. Each deck now designs one bridge, a beat change grown from its own visual signature (a timetable's now-line sweeping across, a dossier page turning, a route drawing on), coded once in `MOTION.bridges` and used where each chapter starts. See [`references/craft-and-direction.md`](references/craft-and-direction.md) §2.7.
+- **Lint `transition-monotone`** warns when every visible beat change is a fade. It does not ask for variety: one bridge, a `match` or a `camera` move clears it. Bridges do not count as showy for `transition-variety`.
+- **Outline check (new workflow step 3):** the beat list, with draft narration and where the signatures and bridges go, is shown before anything is built.
+- **Gather asks in plain words** what the deck is for (present live, send, print, record), and asks for every missing fact in one message.
+- **Revise step:** after delivery, edit the deck, re-run only what the change touches, and refresh every export handed over before.
+- **Phones held upright** get a small hint to turn sideways.
+
 ### What's New in v1.7: Fixes From a Cold Test
 
 A new deck built from scratch with only these docs (a course-planner pitch with real captures) turned up ten rough edges. v1.7 fixes them:
