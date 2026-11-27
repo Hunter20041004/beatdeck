@@ -537,6 +537,9 @@ function motionProbeInitScript() {
         const px = (v) => (String(v).match(/-?\d*\.?\d+px/g) || []).map((n) => Math.abs(parseFloat(n)));
         const vals = Array.isArray(kf) ? kf.flatMap((f) => [f.translate, f.transform]) : kf ? [].concat(kf.translate || [], kf.transform || []) : [];
         vals.forEach((v) => { if (v !== undefined) shift = Math.max(shift, ...px(v), 0); });
+        // Only entrances count as travel; moving a visible element to a new place (re-sorting, FLIP) is fine.
+        const firstOpacity = Array.isArray(kf) ? (kf[0] || {}).opacity : kf && [].concat(kf.opacity === undefined ? [] : kf.opacity)[0];
+        if (!(firstOpacity !== undefined && Number(firstOpacity) === 0)) shift = 0;
         if (o.id === 'bd-change') return anim; // the runtime's own beat-change animations
         log.push({ beat: beat(), props: [...props], easing: norm(o.easing || 'linear'), frames, loop: o.iterations === Infinity, kind: o.id || '', shift });
       }
@@ -682,7 +685,7 @@ async function checkMotion(browser, input, total, allow) {
       warnings.push({
         beat: 'deck',
         type: 'motion-travel',
-        message: `elements fly ${Math.round(Math.max(...far.map((b) => b.d)))}px or more in beats ${list(far.map((b) => b.i))}; premium entrances travel 8-40px. Move the camera or use a beat change for large travel`,
+        message: `elements fly in from ${Math.round(Math.max(...far.map((b) => b.d)))}px or more away in beats ${list(far.map((b) => b.i))}; premium entrances travel 8-40px. Move the camera or use a beat change for large travel (moving a visible element to a new place is fine)`,
       });
     }
 

@@ -15,10 +15,11 @@ An open-source Agent Skill and headless Chromium toolkit for crafting film-like,
 | **Single Source of Truth** | Separate speaker doc & slides drift quickly | Video-only output; no live talk mode | One HTML drives Live Talk, Notes, Script, PDF, Share HTML & MP4 |
 | **Dependencies** | Office / browser SaaS | Node + bundler + React ecosystem | Plain HTML/CSS/JS + Playwright Chromium (`ffmpeg` optional for MP4) |
 
-### What's New in v1.6: Motion That Fits
+### What's New in v1.6: Motion That Fits the Content
 
 - **Restraint is the default.** v1.5 made many effects available and decks started using all of them, which looks cheap. Motion now starts from the **register** of the presentation (pitch, research, product demo, story, teaching, game launch), keeps most beats quiet, and spends accents on one or two signature moments. See [`references/craft-and-direction.md`](references/craft-and-direction.md) §2.
 - **Quiet helpers**: `rise` (short lift and fade on a long deceleration), `unveil` (text rises out of its own mask), `focus` (everything else recedes). These are what most beats should use.
+- **Signature moments that only code can do**: `carry()` turns several beats into one living object (a schedule re-planning, a table re-sorting, earlier details flying into a summary), and §2.5 of the craft guide lists the patterns: living object, the rule performed, time as a driver, the subject's own physics, history collapsing into a summary, state change in place.
 - **`dip` beat change**: fades out, then in through the background, so two busy layouts never overlap mid-change.
 - **Premium defaults**: 720 ms `dip` between beats, `ease.out` = `cubic-bezier(0.16, 1, 0.3, 1)`, critically damped default spring (no bounce), calmer `stamp` and `shake`.
 - **Lint now catches excess**: `motion-accent-overuse`, `motion-busy`, `motion-bounce`, `motion-travel`, `transition-variety`, plus `motion-no-signature` for a long deck with nothing that stands out. The v1.5 warnings that pushed for more variety (`motion-flat`, `motion-repeat`, `motion-one-ease`, `transition-monotony`) are gone.

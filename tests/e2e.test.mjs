@@ -758,7 +758,7 @@ async function runTests() {
     };
     const loudPath = makeFixture(
       'loud-motion',
-      '(scene, { spring, stamp, shake, splitText, stagger }) => { const h = scene.querySelector("h1"); stagger(splitText(h), (el, delay) => spring(el, { translate: ["0 300px", "0 0"] }, { delay, damping: 8 }), { each: 30 }); stamp(scene.querySelector("p"), { impact: h }); }',
+      '(scene, { spring, stamp, shake, splitText, stagger }) => { const h = scene.querySelector("h1"); stagger(splitText(h), (el, delay) => spring(el, { translate: ["0 300px", "0 0"], opacity: [0, 1] }, { delay, damping: 8 }), { each: 30 }); stamp(scene.querySelector("p"), { impact: h }); }',
       ['iris', 'zoom', 'push-left', 'blur', 'cover-up']
     );
     const loudTypes = new Set(JSON.parse(runNode('scripts/lint.mjs', [loudPath, '--json']).stdout).warnings.map((w) => w.type));
@@ -769,6 +769,34 @@ async function runTests() {
     const quietPath = makeFixture('quiet-motion', '(scene, { rise, unveil }) => { unveil(scene.querySelector("h1")); rise(scene.querySelectorAll("p"), { delay: 200 }); }');
     const quietTypes = JSON.parse(runNode('scripts/lint.mjs', [quietPath, '--json']).stdout).warnings.map((w) => w.type).filter((t) => /^motion-|^transition-/.test(t));
     assert.deepEqual(quietTypes, ['motion-no-signature'], `a quiet deck must only be asked for a signature moment (got ${quietTypes.join(', ')})`);
+    // carry(): an element shared with the previous beat starts where it was there.
+    const carryPath = path.join(tmpDir, 'carry', 'deck.html');
+    assert.equal(runNode('scripts/new-deck.mjs', [carryPath, '--ids', 'a,b']).status, 0);
+    let carrySrc = fs.readFileSync(carryPath, 'utf8');
+    carrySrc = carrySrc
+      .replace(/(<section class="scene" data-beat="a"[^>]*>)/, '$1<div class="bd-probe" data-match="m" style="position:absolute;left:100px;top:500px;width:40px;height:40px"></div>')
+      .replace(/(<section class="scene" data-beat="b"[^>]*>)/, '$1<div class="bd-probe" data-match="m" style="position:absolute;left:900px;top:500px;width:40px;height:40px"></div>')
+      .replace(/\/\/ "a": \(scene[\s\S]*?\/\/ \},/, '"b": (scene, { carry }) => { carry(null, { ms: 4000 }); },')
+      .replace('{ id: "b",', '{ id: "b", transition: "cut",');
+    fs.writeFileSync(carryPath, carrySrc, 'utf8');
+    const carryBrowser = await launchBrowser();
+    try {
+      const page = await (await carryBrowser.newContext({ viewport: { width: 1920, height: 1080 } })).newPage();
+      await page.goto(pathToFileURL(carryPath).href);
+      await page.waitForFunction(() => document.body.dataset.ready === '1');
+      await page.evaluate(() => window.__beatdeck.goTo(1));
+      const kf = await page.evaluate(() => {
+        const a = document.querySelector('[data-beat="b"] .bd-probe').getAnimations()[0];
+        return a ? a.effect.getKeyframes()[0].translate : null;
+      });
+      assert.match(String(kf), /^-800px/, `carry must start the element where it was in the previous beat (got ${kf})`);
+      await page.goto(`${pathToFileURL(carryPath).href}?still&p=2`);
+      await page.waitForFunction(() => document.body.dataset.ready === '1');
+      const settled = await page.evaluate(() => document.querySelector('[data-beat="b"] .bd-probe').getBoundingClientRect().left);
+      assert.equal(Math.round(settled), 900, 'carry must settle at its own place under ?still');
+    } finally {
+      await carryBrowser.close();
+    }
     const noMotion = JSON.parse(runNode('scripts/lint.mjs', [loudPath, '--json', '--motion=false']).stdout);
     assert.ok(!noMotion.warnings.some((w) => /^motion-|^transition-/.test(w.type)), '--motion=false must skip the motion pass');
     console.log('   Motion checks passed.');
