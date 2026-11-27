@@ -506,6 +506,7 @@ async function checkStageFit(context, input, total) {
 /** Installed before deck scripts: logs every element animation, tagged with the beat being entered. */
 function motionProbeInitScript() {
   const log = (window.__bdMotionLog = []);
+  window.__bdHelperLog = [];
   const beat = () => (typeof window.__bdMotionBeat === 'number' ? window.__bdMotionBeat : -1);
   const ignored = (el) =>
     !el || !el.closest || el.id === 'world' || el.id === 'stage' ||
@@ -531,7 +532,13 @@ function motionProbeInitScript() {
             frames = Math.max(frames, Array.isArray(v) ? v.length : 1);
           });
         }
-        log.push({ beat: beat(), props: [...props], easing: norm(o.easing || 'linear'), frames, loop: o.iterations === Infinity });
+        // Largest positional jump in the keyframes (stage px), to catch elements flying in from far away.
+        let shift = 0;
+        const px = (v) => (String(v).match(/-?\d*\.?\d+px/g) || []).map((n) => Math.abs(parseFloat(n)));
+        const vals = Array.isArray(kf) ? kf.flatMap((f) => [f.translate, f.transform]) : kf ? [].concat(kf.translate || [], kf.transform || []) : [];
+        vals.forEach((v) => { if (v !== undefined) shift = Math.max(shift, ...px(v), 0); });
+        if (o.id === 'bd-change') return anim; // the runtime's own beat-change animations
+        log.push({ beat: beat(), props: [...props], easing: norm(o.easing || 'linear'), frames, loop: o.iterations === Infinity, kind: o.id || '', shift });
       }
     } catch (_) { /* never break the deck */ }
     return anim;
@@ -574,21 +581,28 @@ function motionProbeInitScript() {
   }).observe(document, { subtree: true, attributes: true, attributeFilter: ['d', 'transform', 'style'], characterData: true, childList: true });
 }
 
-// A "plain" motion fades or slides an element on a stock curve. Colour shifts count as plain too.
-const PLAIN_PROPS = new Set(['opacity', 'transform', 'translate', 'scale', 'visibility', 'color', 'background-color',
-  'backgroundColor', 'border-color', 'border-top-color', 'border-right-color', 'border-bottom-color', 'border-left-color', 'box-shadow', 'boxShadow']);
 function overshoots(easing) {
-  if (/^linear\(/.test(easing)) return true; // springs are emitted as linear() curves
+  const lin = /^linear\((.*)\)$/.exec(easing); // springs are emitted as linear() curves
+  if (lin) return lin[1].split(',').some((p) => { const v = parseFloat(p); return v > 1.005 || v < -0.005; });
   const m = /^cubic-bezier\(([^)]*)\)$/.exec(easing);
   if (!m) return false;
   const [, y1, , y2] = m[1].split(',').map(Number);
   return y1 < 0 || y1 > 1 || y2 < 0 || y2 > 1;
 }
-const isPlain = (r) => r.props.every((p) => PLAIN_PROPS.has(p)) && r.frames <= 2 && !overshoots(r.easing);
+
+// Accents are loud on purpose. A premium deck spends them on one or two moments, never as decoration.
+const ACCENT_KINDS = new Set(['stamp', 'shake', 'iris', 'cursor', 'typewriter', 'splitText']);
+// Gestures that stay quiet however often they appear.
+const QUIET_KINDS = new Set(['rise', 'unveil', 'focus', 'draw', 'countUp', 'morph', 'tween', 'ambient']);
+// Beat changes that keep continuity or stay invisible; everything else is a "loud" change.
+const QUIET_CHANGES = new Set(['cut', 'fade', 'dip', 'match', 'camera']);
+const family = (t) => String(t || '').replace(/-(left|right|up|down)$/, '');
 
 /**
- * Play every beat live (10x fast-forward) and look for motion monotony: every beat fading/sliding
- * in, the same motion signature beat after beat, one easing curve for everything, one beat change.
+ * Play every beat live (10x fast-forward) and look for motion excess, the thing that makes a deck feel
+ * cheap: accents on every other beat, several gestures fighting in one beat, bouncy curves everywhere, a
+ * different flashy beat change each time, elements flying in from far away. Also flags the opposite
+ * extreme, a long deck with no signature moment at all.
  * @param {import('playwright').Browser} browser
  * @param {string} input
  * @param {number} total
@@ -619,65 +633,81 @@ async function checkMotion(browser, input, total, allow) {
       );
       await page.waitForTimeout(340);
     }
-    const log = await page.evaluate(() => window.__bdMotionLog || []);
-    const byBeat = Array.from({ length: total }, () => []);
-    for (const r of log) if (r.beat >= 0 && r.beat < total && !r.loop) byBeat[r.beat].push(r);
+    const { log, helpers } = await page.evaluate(() => ({ log: window.__bdMotionLog || [], helpers: window.__bdHelperLog || [] }));
+    const anims = Array.from({ length: total }, () => []);
+    for (const r of log) if (r.beat >= 0 && r.beat < total && !r.loop) anims[r.beat].push(r);
+    const kinds = Array.from({ length: total }, () => new Set());
+    for (const h of helpers) if (h.beat >= 0 && h.beat < total) kinds[h.beat].add(h.kind);
+    // Springs are tagged on their animations; count them only when they actually overshoot.
+    anims.forEach((rs, i) => rs.forEach((r) => { if (r.kind === 'spring' && overshoots(r.easing)) kinds[i].add('spring'); }));
+    const list = (idx) => idx.map((i) => i + 1).join(', ');
+    const skip = (type) => allow.includes(type);
 
-    const label = (a, b) => (a === b ? `beat ${a + 1}` : `beats ${a + 1}-${b + 1}`);
-    const moving = byBeat.map((rs, i) => ({ i, rs })).filter((b) => b.rs.length > 0);
-    const plain = moving.filter((b) => b.rs.every(isPlain));
-    if (!allow.includes('motion-flat') && moving.length >= 4 && plain.length / moving.length >= 0.75) {
+    const accentBeats = kinds.map((k, i) => ({ i, a: [...k].filter((x) => ACCENT_KINDS.has(x)) })).filter((b) => b.a.length);
+    const accentBudget = Math.max(2, Math.ceil(total / 6));
+    if (!skip('motion-accent-overuse') && accentBeats.length > accentBudget) {
       warnings.push({
         beat: 'deck',
-        type: 'motion-flat',
-        message: `${plain.length} of ${moving.length} animated beats only fade or slide elements in (beats ${plain.map((b) => b.i + 1).join(', ')}); give this world its own verbs: masks and wipes, drawn lines, springs, split type, path motion, stamps, match cuts (see craft-and-direction.md §2)`,
+        type: 'motion-accent-overuse',
+        message: `${accentBeats.length} beats use accent effects (beats ${list(accentBeats.map((b) => b.i))}: ${[...new Set(accentBeats.flatMap((b) => b.a))].join(', ')}); a ${total}-beat deck has room for about ${accentBudget}. Keep the one or two where the story turns and let the rest rise, unveil or fade (craft-and-direction.md §2)`,
       });
     }
 
-    if (!allow.includes('motion-repeat')) {
-      const sig = byBeat.map((rs) =>
-        rs.length ? `${[...new Set(rs.flatMap((r) => r.props))].sort().join(',')}|${[...new Set(rs.map((r) => r.easing))].sort().join(',')}` : ''
-      );
-      let start = 0;
-      for (let i = 1; i <= total; i += 1) {
-        if (i < total && sig[i] && sig[i] === sig[start]) continue;
-        if (sig[start] && i - start >= 3) {
+    if (!skip('motion-busy')) {
+      kinds.forEach((k, i) => {
+        const loud = [...k].filter((x) => !QUIET_KINDS.has(x));
+        const accents = loud.filter((x) => ACCENT_KINDS.has(x));
+        if (loud.length >= 3 || accents.length >= 2) {
           warnings.push({
-            beat: label(start, i - 1),
-            type: 'motion-repeat',
-            message: `${i - start} beats in a row move the same properties with the same easing; change the gesture, tempo or direction between them`,
+            beat: `beat ${i + 1}`,
+            type: 'motion-busy',
+            message: `${loud.length} different effects compete in one beat (${loud.join(', ')}); give the beat one gesture and let everything else stay still`,
           });
         }
-        start = i;
-      }
+      });
     }
 
-    const finite = byBeat.flat().filter((r) => r.easing !== 'js' && r.easing !== 'linear');
-    if (!allow.includes('motion-one-ease') && finite.length >= 12) {
-      const counts = new Map();
-      finite.forEach((r) => counts.set(r.easing, (counts.get(r.easing) || 0) + 1));
-      const [topEase, topCount] = [...counts.entries()].sort((a, b) => b[1] - a[1])[0];
-      if (topCount / finite.length >= 0.85 && !finite.some((r) => overshoots(r.easing))) {
-        warnings.push({
-          beat: 'deck',
-          type: 'motion-one-ease',
-          message: `${Math.round((topCount / finite.length) * 100)}% of ${finite.length} animations use the same curve (${topEase}); give arrivals, exits, impacts and camera moves their own easing or a spring`,
-        });
-      }
+    const bouncy = anims.map((rs, i) => ({ i, n: rs.filter((r) => overshoots(r.easing)).length })).filter((b) => b.n > 0);
+    const bounceBudget = Math.max(1, Math.ceil(total / 8));
+    if (!skip('motion-bounce') && bouncy.length > bounceBudget) {
+      warnings.push({
+        beat: 'deck',
+        type: 'motion-bounce',
+        message: `overshooting curves (bouncy springs, snap) appear in ${bouncy.length} beats (beats ${list(bouncy.map((b) => b.i))}); bounce reads as playful or cheap outside a play-register deck. Use MOTION.ease.out or a critically damped spring`,
+      });
+    }
+
+    const far = anims.map((rs, i) => ({ i, d: Math.max(0, ...rs.filter((r) => r.kind !== 'cursor' && !String(r.kind).startsWith('bd-')).map((r) => r.shift || 0)) })).filter((b) => b.d > 160);
+    if (!skip('motion-travel') && far.length >= 2) {
+      warnings.push({
+        beat: 'deck',
+        type: 'motion-travel',
+        message: `elements fly ${Math.round(Math.max(...far.map((b) => b.d)))}px or more in beats ${list(far.map((b) => b.i))}; premium entrances travel 8-40px. Move the camera or use a beat change for large travel`,
+      });
     }
 
     const changes = transitions.slice(1).filter((t) => typeof t === 'string' && t !== '');
-    if (!allow.includes('transition-monotony') && changes.length >= 4) {
-      const counts = new Map();
-      changes.forEach((t) => counts.set(t, (counts.get(t) || 0) + 1));
-      const [topType, topCount] = [...counts.entries()].sort((a, b) => b[1] - a[1])[0];
-      if (topCount / changes.length >= 0.8) {
-        warnings.push({
-          beat: 'deck',
-          type: 'transition-monotony',
-          message: `${topCount} of ${changes.length} beat changes use "${topType}"; pick each beat's transition from what the story does there (continue: match or camera, turn: cut or wipe, go deeper: iris or zoom)`,
-        });
-      }
+    const loudChanges = changes.filter((t) => !QUIET_CHANGES.has(family(t)));
+    const loudFamilies = [...new Set(loudChanges.map(family))];
+    if (!skip('transition-variety') && changes.length >= 3 && (loudFamilies.length > 2 || loudChanges.length > Math.max(2, Math.ceil(changes.length / 4)))) {
+      warnings.push({
+        beat: 'deck',
+        type: 'transition-variety',
+        message: `${loudChanges.length} of ${changes.length} beat changes are showy (${loudFamilies.join(', ')}); keep most changes to fade, cut, match or camera, and give at most two story turns a distinct change`,
+      });
+    }
+
+    // Hand-written decks may not call the helpers: any non-trivial property (a drawn stroke, a clip, a
+    // morphing path, a rolling number) also counts as a moment that stands out.
+    const SIMPLE = new Set(['opacity', 'transform', 'translate', 'scale', 'visibility', 'filter']);
+    const signature = kinds.some((k) => [...k].some((x) => !QUIET_KINDS.has(x) || ['draw', 'morph', 'countUp'].includes(x))) ||
+      loudChanges.length > 0 || anims.some((rs) => rs.some((r) => (r.kind === 'tween' || !QUIET_KINDS.has(r.kind)) && r.props.some((p) => !SIMPLE.has(p))));
+    if (!skip('motion-no-signature') && total >= 6 && !signature) {
+      warnings.push({
+        beat: 'deck',
+        type: 'motion-no-signature',
+        message: 'no beat has a signature moment; quiet is right for most beats, but give the moment the story turns one gesture of its own (a drawn line, a match cut, a focus pull)',
+      });
     }
   } finally {
     await context.close().catch(() => {});

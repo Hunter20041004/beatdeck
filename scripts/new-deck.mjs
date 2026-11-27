@@ -71,13 +71,13 @@ function main() {
     )
     .join('\n');
 
-  const choreoJs = `    // ${jsString(ids[0])}: (scene, { at, tween, spring, stagger, splitText, wipe, draw, countUp, isStill }) => {
-    //   const words = splitText(scene.querySelector("h1"), { by: "char" });
-    //   stagger(words, (el, delay) => spring(el, { translate: ["0 0.6em", "0 0"], opacity: [0, 1] }, { delay }), { each: 40 });
-    //   wipe(scene.querySelector(".photo"), { from: "left", delay: 300 });
-    //   draw(scene.querySelector("path.route"), 900, { delay: 500, ease: "inOut" });
-    //   countUp(scene.querySelector(".metric"), 92.5, 1200, { decimals: 1, suffix: "%", delay: 800 });
-    //   at(1600, () => scene.classList.add("idle"), { liveOnly: true });
+  const choreoJs = `    // ${jsString(ids[0])}: (scene, { at, rise, unveil, focus, draw, countUp, isStill }) => {
+    //   // Quiet by default: one headline reveal, content lifts in, one thing draws attention.
+    //   unveil(scene.querySelector("h1"));
+    //   rise(scene.querySelectorAll(".point"), { delay: 260, each: 80 });
+    //   draw(scene.querySelector("path.trend"), 1100, { delay: 500, ease: "inOut" });
+    //   countUp(scene.querySelector(".metric"), 92.5, 1400, { decimals: 1, suffix: "%", delay: 700 });
+    //   // Save wipe, iris, stamp, shake, cursor and springs for the one or two beats where the story turns.
     // },`;
 
   const template = fs.readFileSync(TEMPLATE, 'utf8');

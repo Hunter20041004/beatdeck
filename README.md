@@ -15,6 +15,15 @@ An open-source Agent Skill and headless Chromium toolkit for crafting film-like,
 | **Single Source of Truth** | Separate speaker doc & slides drift quickly | Video-only output; no live talk mode | One HTML drives Live Talk, Notes, Script, PDF, Share HTML & MP4 |
 | **Dependencies** | Office / browser SaaS | Node + bundler + React ecosystem | Plain HTML/CSS/JS + Playwright Chromium (`ffmpeg` optional for MP4) |
 
+### What's New in v1.6: Motion That Fits
+
+- **Restraint is the default.** v1.5 made many effects available and decks started using all of them, which looks cheap. Motion now starts from the **register** of the presentation (pitch, research, product demo, story, teaching, game launch), keeps most beats quiet, and spends accents on one or two signature moments. See [`references/craft-and-direction.md`](references/craft-and-direction.md) §2.
+- **Quiet helpers**: `rise` (short lift and fade on a long deceleration), `unveil` (text rises out of its own mask), `focus` (everything else recedes). These are what most beats should use.
+- **`dip` beat change**: fades out, then in through the background, so two busy layouts never overlap mid-change.
+- **Premium defaults**: 720 ms `dip` between beats, `ease.out` = `cubic-bezier(0.16, 1, 0.3, 1)`, critically damped default spring (no bounce), calmer `stamp` and `shake`.
+- **Lint now catches excess**: `motion-accent-overuse`, `motion-busy`, `motion-bounce`, `motion-travel`, `transition-variety`, plus `motion-no-signature` for a long deck with nothing that stands out. The v1.5 warnings that pushed for more variety (`motion-flat`, `motion-repeat`, `motion-one-ease`, `transition-monotony`) are gone.
+- **`upgrade-runtime.mjs`**: moves an existing deck onto the current runtime without touching its design.
+
 ### What's New in v1.5: Motion With a Point of View
 
 - **Beat changes beyond the cross-fade**: the skeleton ships 11 changes (`cut`, `fade`, `push-*`, `cover-*`, `reveal-*`, `wipe-*`, `iris`, `zoom`, `blur`, `match`, `camera`), set per beat with `transition`, reversed automatically when going back, with the leaving beat holding its final frame.
@@ -143,6 +152,9 @@ node <skill-dir>/scripts/snapshot.mjs <path/to/hero.html> --raw [--out dir]
 
 # 1c. Motion filmstrip: frames over time for each beat
 node <skill-dir>/scripts/filmstrip.mjs <path/to/deck.html> [--beats 2-4] [--times 0,120,280,500,900,1500,2600] [--slow 4] [--out dir]
+
+# 1d. Upgrade an older deck to the current runtime (keeps its design)
+node <skill-dir>/scripts/upgrade-runtime.mjs <path/to/deck.html> [--out new.html]
 
 # 2. Export timestamped speaker script Markdown from BEATS (prints to stdout if --out omitted)
 node <skill-dir>/scripts/script-export.mjs <path/to/deck.html> [--out script.md] [--rate 3.6]
