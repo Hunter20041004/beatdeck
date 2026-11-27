@@ -103,6 +103,16 @@ export const INTERNAL_PROCESS = [
   [/(修正|修好|修了|清掉|改掉)[^。！？\n]{0,8}\d+\s*(處|处|個|个|條|条)/, '修了 N 處'],
 ];
 
+/**
+ * Metaphor equations that sound profound but carry no information:
+ * 「躲起來，是一場賭」「設計是一門藝術」 / "Hiding is a gamble", "Growth is a journey".
+ */
+export const METAPHOR_FRAMES = [
+  [/是一(場|场|種|种|門|门|段|趟|首|次)[一-鿿]{1,6}/, '「X 是一場／一種 Y」'],
+  [/(就像|宛如|彷彿|仿佛|如同|好比)(是)?一(場|场|種|种|首|段|趟)/, '「就像一場 Y」'],
+  [/\b(is|was|becomes|feels like|turns into) (a|an) (\w+ )?(gamble|journey|dance|art|bet|balancing act|marathon|puzzle|symphony|labyrinth|rollercoaster|love letter|game of)\b/i, '"X is a gamble/journey"'],
+];
+
 /** Placeholder text that should never reach an audience. */
 export const PLACEHOLDERS = [
   [/\blorem ipsum\b/i, 'lorem ipsum'],
@@ -173,6 +183,14 @@ export function checkText(text, { lang = '' } = {}) {
     if (re.test(text)) hits.push(label);
   }
   if (hits.length) out.push({ type: 'ai-phrase', message: `Stock AI phrasing: ${hits.map((h) => `"${h}"`).join(', ')}` });
+
+  const metaphors = METAPHOR_FRAMES.filter(([re]) => re.test(text)).map(([, l]) => l);
+  if (metaphors.length) {
+    out.push({
+      type: 'metaphor-frame',
+      message: `Metaphor equation instead of information: ${metaphors.join(', ')}; say what actually happens`,
+    });
+  }
 
   const internal = INTERNAL_PROCESS.filter(([re]) => re.test(text)).map(([, l]) => l);
   if (internal.length) {
@@ -255,4 +273,25 @@ export function narrationOverlap(say, stageText) {
     if (b.includes(a.slice(i, i + 4))) hit += 1;
   }
   return total ? hit / total : 0;
+}
+
+/**
+ * Two- or three-beat slogan headline: 「死一次，只賠一夜。」「每條規矩，都驗過。」 /
+ * "Three lenses. Zero broken frames." One is fine; a deck full of them is the AI cadence.
+ * @param {string} headline
+ */
+export function isSloganHeadline(headline) {
+  const h = String(headline || '').replace(/\s+/g, ' ').trim();
+  if (!h) return false;
+  const cjk = (h.match(/[㐀-鿿]/g) || []).length;
+  if (cjk >= h.replace(/\s/g, '').length * 0.5) {
+    const parts = h.replace(/[。！!？?]+$/, '').split(/[，,、；;：:。！？]/).map((p) => p.trim()).filter(Boolean);
+    return parts.length >= 2 && parts.length <= 3 && parts.every((p) => Array.from(p).length <= 8);
+  }
+  const sentences = h.split(/(?<=[^\d\s][.!?])\s*(?=[A-Z"“‘'])/).map((p) => p.trim()).filter(Boolean);
+  return (
+    sentences.length >= 2 &&
+    sentences.length <= 3 &&
+    sentences.every((p) => /[.!?]$/.test(p) && p.split(/\s+/).length <= 5)
+  );
 }

@@ -5,6 +5,7 @@ import path from 'node:path';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { getBrowserExecutablePath, parseCliArgs } from '../scripts/lib/browser.mjs';
+import { isSloganHeadline } from '../scripts/lib/copy-rules.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
@@ -148,7 +149,7 @@ function buildAiTellFixtureHtml() {
       <div class="grad"></div>
       <h1>議程</h1>
       <div class="glass" style="left:100px">A</div><div class="glass" style="left:600px">B</div>
-      <p class="copy">在當今數位時代，我們以AI賦能團隊,打造極致體驗。这个視頻很棒——真的。經過三輪審查與 5 次調整。</p>
+      <p class="copy">在當今數位時代，我們以AI賦能團隊,打造極致體驗。这个視頻很棒——真的。經過三輪審查與 5 次調整。躲起來，是一場賭。</p>
     </div>
     <div class="beat">
       <ul>${words}</ul>
@@ -590,7 +591,7 @@ async function runTests() {
     for (const t of [
       'ai-gradient', 'gradient-text', 'glassmorphism', 'label-headline', 'ai-phrase', 'zh-punct',
       'zh-variant', 'zh-term', 'contrast-frame', 'exclamation', 'em-dash', 'bullet-stack',
-      'text-density', 'read-aloud', 'placeholder', 'internal-process',
+      'text-density', 'read-aloud', 'placeholder', 'internal-process', 'metaphor-frame',
     ]) {
       assert.ok(aiTypes.has(t), `expected ${t} warning, got ${[...aiTypes].join(', ')}`);
     }
@@ -602,6 +603,11 @@ async function runTests() {
       !aiWarnings.some((w) => w.type === 'ai-phrase' && /beat 2\/2 \(two\) stage/.test(w.beat)),
       'data-lint-allow="ai-phrase" must exempt the stage span'
     );
+    // Slogan cadence is a deck-level headline rhythm check
+    assert.equal(isSloganHeadline('死一次，只賠一夜。'), true);
+    assert.equal(isSloganHeadline('Three lenses.Zero broken frames.'), true);
+    assert.equal(isSloganHeadline('被怪看見躲進衣櫃，牠會守在門口等你出來'), false);
+    assert.equal(isSloganHeadline('Beatdeck v1.3 ships today.'), false);
     const aiStrict = runNode('scripts/lint.mjs', [aiPath, '--strict']);
     assert.notEqual(aiStrict.status, 0, 'lint --strict must fail on AI tells');
     const demoStrict = runNode('scripts/lint.mjs', [DEMO_DECK, '--strict']);

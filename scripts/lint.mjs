@@ -5,6 +5,7 @@ import {
   countEmDashes,
   countExclamations,
   isLabelHeadline,
+  isSloganHeadline,
   narrationOverlap,
 } from './lib/copy-rules.mjs';
 
@@ -483,7 +484,7 @@ async function main() {
       const total = apiInfo.beats.length;
       const lang = apiInfo.lang;
       const sayAllowed = (type) => apiInfo.lintAllow.includes(type);
-      const deckTally = { contrast: [], emDash: 0, exclaim: 0 };
+      const deckTally = { contrast: [], emDash: 0, exclaim: 0, slogans: [], headlines: 0 };
 
       for (let i = 0; i < total; i += 1) {
         const beat = apiInfo.beats[i];
@@ -564,6 +565,10 @@ async function main() {
         const dashCopy = inspected.segments.filter((seg) => !seg.allow.includes('em-dash')).map((seg) => seg.text).join(' ');
         deckTally.emDash += countEmDashes(dashCopy) + (sayAllowed('em-dash') ? 0 : countEmDashes(say));
         deckTally.exclaim += countExclamations(stageCopy) + (sayAllowed('exclamation') ? 0 : countExclamations(say));
+        if (inspected.headline) {
+          deckTally.headlines += 1;
+          if (isSloganHeadline(inspected.headline)) deckTally.slogans.push(`${i + 1}`);
+        }
         if (inspected.headline && isLabelHeadline(inspected.headline)) {
           pushOnce('stage', {
             type: 'label-headline',
@@ -586,6 +591,17 @@ async function main() {
           beat: 'deck',
           type: 'contrast-frame',
           message: `"Not X, but Y" / 「不是…而是…」 framing on beats ${deckTally.contrast.join(', ')}; state the point directly`,
+        });
+      }
+      if (
+        !sayAllowed('slogan-cadence') &&
+        deckTally.slogans.length >= 4 &&
+        deckTally.slogans.length >= deckTally.headlines * 0.4
+      ) {
+        warnings.push({
+          beat: 'deck',
+          type: 'slogan-cadence',
+          message: `${deckTally.slogans.length} of ${deckTally.headlines} headlines use the same punchy two-beat slogan rhythm (beats ${deckTally.slogans.join(', ')}); write plain headlines that say what happens`,
         });
       }
       const dashLimit = Math.max(1, Math.floor(total / 4));

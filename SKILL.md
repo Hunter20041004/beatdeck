@@ -41,11 +41,11 @@ Follow this order; each step gates the next.
    - Fill `BEATS` with speakable `say` lines, using `pdfSkip: true` on intermediate micro-steps.
    - Write each beat's choreography in `CHOREO[id]` using the provided `at`, `animate`, `draw`, `countUp`, and `typewriter` helpers.
    - Lock intended line breaks with `<br>` / `data-expected-lines="K"`.
-   - Write headlines as claims, not topic labels. Every number needs a source; mark anything missing as `[missing: …]` and ask the user instead of inventing it. Set `META.lang` (e.g. `zh-Hant`) so the language-specific checks run.
+   - Write headlines as plain claims that say what happens. Avoid topic labels, metaphor equations, and the clipped two-beat slogan rhythm. Every number needs a source; mark anything missing as `[missing: …]` and ask the user instead of inventing it. Set `META.lang` (e.g. `zh-Hant`) so the language-specific checks run.
 5. **Lint until clean.** Run `lint.mjs <deck.html> --strict`; use `--json` when parsing the output. Errors cover overflow, unexpected wraps, broken images, runtime errors, and contract violations. Craft warnings cover:
    - **Layout:** the card shell, nested cards, text collisions, repeated layouts, and leftover skeleton scenes.
    - **AI-tell visuals:** AI gradients, gradient text, frosted glass, text density, bullet stacks, and label headlines.
-   - **AI-tell wording,** checked on stage *and* in `say`: stock phrases, contrast frames, em dashes, exclamation marks, placeholders, internal process details, narration that repeats the slide, and 簡體字, 大陸用語 and half-width punctuation in Chinese.
+   - **AI-tell wording,** checked on stage *and* in `say`: stock phrases, contrast frames, metaphor equations (「X 是一場 Y」), slogan-cadence headlines (「短句，短句。」), em dashes, exclamation marks, placeholders, internal process details, narration that repeats the slide, and 簡體字, 大陸用語 and half-width punctuation in Chinese.
 
    Fix them by rewriting, not by synonym-swapping. Mark a genuinely intentional case with `data-lint-allow="<type>"` on stage or `META.lintAllow` for narration.
 6. **Three-lens review.** Run `snapshot.mjs <deck.html>` and open `contact-sheet.png` and any doubtful `beat-NN.png`.

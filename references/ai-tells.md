@@ -70,6 +70,8 @@ Lint type: `internal-process` (stage text and `say`; the presenter-only `note` f
 **Patterns:**
 
 - **"Not X, but Y" framing** (`contrast-frame`, flagged on 2+ beats): *it's not just a tool, it's a partner*; *this isn't about X, it's about Y*; *…, not a Y*. The most persistent tell in current models. State the point directly.
+- **Metaphor equations** (`metaphor-frame`): *hiding is a gamble*, *growth is a journey*, *design is a dance*. They sound profound and carry no information. Say what actually happens: *if a monster sees you hide, it waits outside the door*.
+- **Slogan cadence** (`slogan-cadence`, deck-level: 4+ headlines and at least 40% of them): headlines built as two or three clipped sentences, e.g. *Three lenses. Zero broken frames.*, *Stop formatting slides. Start directing beats.* One can land; a deck full of them reads like ad copy. Write plain headlines of varied length that state what happens.
 - **Em dashes** (`em-dash`, more than one per four beats): the em dash is a legitimate mark and its presence proves nothing, but density is a tell. Prefer periods, commas, colons.
 - **Exclamation marks** (`exclamation`): hype by punctuation. Let the content carry the energy.
 - **Review only:** "Here's the thing:" and other rhetorical-question openers; "X: The Y of Z" colon titles; Title Case On Every Line; parenthetical asides in every sentence; every sentence the same length.
@@ -82,6 +84,8 @@ Lint type: `internal-process` (stage text and `say`; the presenter-only `note` f
 
 **句型：**
 
+- **比喻等式** (`metaphor-frame`)：「躲起來，是一場賭」「設計是一門藝術」「成長是一段旅程」「就像一場冒險」。聽起來有深度，其實沒有資訊。改成講實際會發生什麼：「被怪看見躲進衣櫃，牠會守在門口等你出來」。
+- **標語節奏** (`slogan-cadence`，整份簡報層級：4 個以上、且占標題 40% 以上)：「死一次，只賠一夜。」「每條規矩，都驗過。」「今晚，換你上山。」這種「短句，短句。」的兩拍標題，加上句號製造戲劇停頓。偶爾一個無妨，整份都是就像廣告文案。標題寫成平實、長短不一的陳述，標題結尾不加句號。
 - **對比腔** (`contrast-frame`)：「不是…，而是…」「不僅…更…」「與其說…不如說…」。偶爾一次無妨，整份簡報反覆出現就是 AI 腔。直接講結論。
 - **制式轉折**（人工審查）：「首先、其次、最後」「從另一個角度來看」「更有意思的是」「老實說」。
 - **翻譯腔**（人工審查）：「進行…的動作」「做出…的決定」「對於…來說」「透過…的方式」「基於…」。改成直接的動詞。
@@ -123,6 +127,9 @@ Lint type: `internal-process` (stage text and `say`; the presenter-only `note` f
 | Our platform seamlessly empowers teams to unlock their full potential. | Support tickets dropped from 140 to 52 a week after the March rollout. |
 | It's not just a tool, it's a complete paradigm shift. | It replaces three tools your team already pays for. |
 | Agenda / Overview | Why the 3 a.m. pager keeps ringing |
+| Hiding is a gamble. | If a monster sees you hide, it waits outside the door. |
+| 躲起來，是一場賭。 | 被怪看見躲進衣櫃，牠會守在門口等你出來 |
+| 死一次，只賠一夜。 | 被抓到時，紙紮替身讓你重來那一夜 |
 | Thank you! Questions? | Ship the fix this sprint: two engineers, nine days. |
 | 在當今數位轉型的浪潮下，我們以 AI 賦能企業，打造一站式的極致體驗。 | 去年十一月，客服平均要 14 分鐘才回第一封信；導入後縮短到 3 分鐘。 |
 | 這不僅僅是一個產品，更是一種全新的生活方式。 | 每天早上省下通勤前找資料的 20 分鐘。 |

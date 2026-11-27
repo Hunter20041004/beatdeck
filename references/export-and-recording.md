@@ -68,6 +68,8 @@ Craft **warnings** (printed as `WARN`, fatal only with `--strict`):
 | `placeholder` | TODO, TBD, XX%, `[Company]`, lorem ipsum, John Doe, Acme, 某某, 〇〇. |
 | `internal-process` | Process bookkeeping: iteration/revision counts, review rounds, resubmission notes, sub-agents, bug-fix tallies, commit hashes, source file paths (「調整了 N 次」「第二版修正」「補交」「修了 N 處」). `note` is not checked. |
 | `read-aloud` | ≥ 70% of a beat's `say` 4-grams are printed on stage. |
+| `metaphor-frame` | 「X 是一場／一種 Y」「就像一場…」 / "X is a gamble/journey/dance" in stage text or `say`. |
+| `slogan-cadence` | 4+ headlines (and ≥ 40% of them) are two- or three-beat clipped slogans: 「短句，短句。」 or "Three lenses. Zero broken frames." (deck-level; headline = largest text on the beat). |
 | `contrast-frame` | "Not X, but Y" / 「不是…而是…」 framing on 2+ beats (deck-level). |
 | `em-dash` / `exclamation` | More than one em dash per four beats, or one exclamation run per six beats (deck-level). |
 | `zh-punct` | Half-width `,.;:!?` between CJK characters (any `zh*` lang). |
