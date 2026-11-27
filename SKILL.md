@@ -70,7 +70,7 @@ Speaker notes (`N`), script Markdown, PDFs, and video timing all read from `BEAT
 
 ## Runtime Contract (summary)
 
-- `#stage` is `1920×1080`, aspect-fit scaled. Inactive beats are hidden with `display:none`, `visibility:hidden`, or `opacity:0`.
+- `#stage` is `1920×1080`, aspect-fit and centred with an explicit `translate + scale` from `transform-origin: 0 0` (never grid-centre + `scale()` around the centre: it opens skewed in Claude and other host panes). Inactive beats are hidden with `display:none`, `visibility:hidden`, or `opacity:0`.
 - `?p=N` (1-based) · `?still` (no motion, `at()` settled, chrome and subtitle hidden) · `?video` (chrome hidden, subtitle kept) · `?bare` (stage only).
 - `document.body.dataset.ready = "1"` after `document.fonts.ready` (raced with a timeout) and the first render.
 - `window.__beatdeck = { version: "1.0", meta, list(), current(), goTo(i), setSubtitle(text) }`.

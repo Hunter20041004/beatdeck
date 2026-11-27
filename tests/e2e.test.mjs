@@ -25,6 +25,28 @@ function runNode(scriptRelPath, args = []) {
   });
 }
 
+// Minimal stage fit + key/click navigation for hand-written fixtures, so they meet lint's
+// stage-fit and controls checks (stage-contract.md §1). Injected right before </body>.
+const FIXTURE_STAGE_RUNTIME = `<style>
+  html, body { overflow: hidden; }
+  #stage { position: absolute !important; left: 0; top: 0; transform-origin: 0 0; }
+</style>
+<script>
+  (() => {
+    const st = document.getElementById('stage');
+    const fit = () => {
+      const w = window.innerWidth, h = window.innerHeight, s = Math.min(w / 1920, h / 1080);
+      st.style.transform = 'translate(' + (w - 1920 * s) / 2 + 'px,' + (h - 1080 * s) / 2 + 'px) scale(' + s + ')';
+    };
+    fit();
+    window.addEventListener('resize', fit);
+    const go = (d) => window.__beatdeck.goTo(Math.max(0, Math.min(window.__beatdeck.list().length - 1, window.__beatdeck.current() + d)));
+    window.addEventListener('keydown', (e) => { if (e.key === 'ArrowRight') go(1); if (e.key === 'ArrowLeft') go(-1); });
+    document.addEventListener('click', (e) => go(e.clientX < window.innerWidth * 0.25 ? -1 : 1));
+  })();
+</script>
+`;
+
 function buildNegativeFixtureHtml() {
   return `<!doctype html>
 <html lang="en">
@@ -118,7 +140,7 @@ function buildCraftWarningFixtureHtml() {
     };
     document.body.dataset.ready = '1';
   </script>
-</body>
+${FIXTURE_STAGE_RUNTIME}</body>
 </html>`;
 }
 
@@ -171,7 +193,7 @@ function buildAiTellFixtureHtml() {
     };
     document.body.dataset.ready = '1';
   </script>
-</body>
+${FIXTURE_STAGE_RUNTIME}</body>
 </html>`;
 }
 
@@ -221,7 +243,7 @@ function buildRegressionFixtures(tmpDir) {
     };
     document.fonts.ready.then(() => { document.body.dataset.ready = '1'; });
   </script>
-</body>
+${FIXTURE_STAGE_RUNTIME}</body>
 </html>`,
     'utf8'
   );
@@ -644,6 +666,26 @@ async function runTests() {
       await fitBrowser.close();
     }
     console.log('   Stage fit checks passed.');
+
+    // 12) lint catches the old centre-origin scaling (the "opens skewed inside Claude" bug) and dead controls
+    console.log('12) Checking lint stage-fit / controls failures...');
+    const skelSrc = fs.readFileSync(skelPath, 'utf8');
+    const legacyFit = skelSrc
+      .replace(/#viewport \{[^}]*\}/, '#viewport { position: relative; width: 100%; height: 100%; display: grid; place-items: center; }')
+      .replace('position: absolute; left: 0; top: 0; width: 1920px; height: 1080px;\n    transform-origin: 0 0;', 'position: relative; width: 1920px; height: 1080px; flex: none;\n    transform-origin: center center;')
+      .replace(/stage\.style\.transform = `translate\([^`]*`;/, 'stage.style.transform = `scale(${s})`;');
+    assert.notEqual(legacyFit, skelSrc, 'legacy-fit fixture must differ from the skeleton');
+    const legacyPath = path.join(tmpDir, 'legacy-fit.html');
+    fs.writeFileSync(legacyPath, legacyFit, 'utf8');
+    const legacyLint = runNode('scripts/lint.mjs', [legacyPath]);
+    assert.notEqual(legacyLint.status, 0, 'lint must fail a deck scaled around its centre');
+    assert.match(legacyLint.stderr, /\(stage-fit\)/);
+    const deadKeysPath = path.join(tmpDir, 'dead-keys.html');
+    fs.writeFileSync(deadKeysPath, skelSrc.replace('window.addEventListener("keydown"', 'window.addEventListener("keydown-disabled"'), 'utf8');
+    const deadKeysLint = runNode('scripts/lint.mjs', [deadKeysPath]);
+    assert.notEqual(deadKeysLint.status, 0, 'lint must fail a deck whose keyboard navigation is dead');
+    assert.match(deadKeysLint.stderr, /\(controls\) ArrowRight/);
+    console.log('   Stage-fit / controls lint failures caught.');
 
     console.log('ALL E2E TESTS PASSED');
   } finally {
