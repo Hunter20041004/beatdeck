@@ -33,18 +33,20 @@ A lint pass is necessary, not sufficient. No rule list can guarantee a deck "doe
 
 ### Motion tells
 
-Motion gives a deck away faster than any colour, because the audience sees the same gesture twelve times. Watch the deck with `filmstrip.mjs`; `snapshot.mjs` only shows the last frame.
+Motion gives a deck away faster than any colour. Today the usual failure is not too little motion but too much: effects used as decoration read as cheap and pull eyes off the speaker. Watch the deck with `filmstrip.mjs`; `snapshot.mjs` only shows the last frame.
 
 | Tell | Why it reads as AI | Do instead | Lint |
 | :--- | :--- | :--- | :--- |
-| Every element fades in and drifts up ~20px, staggered left to right | The default entrance of every animation library | Verbs from the world's material: wipe, draw, stamp, spring, split type, follow a path (craft-and-direction §2.1) | `motion-flat` |
-| The same entrance on beat after beat | Each beat choreographed in isolation | Change gesture, tempo, direction or origin between neighbours | `motion-repeat` |
-| One easing curve for everything | Nobody decided how this world moves | Named curves per role (arrive, leave, impact, camera) and a spring where things are physical | `motion-one-ease` |
-| A cross-fade between every pair of beats | The tool's default transition | Pick each change from what the story does there: cut at a turn, match to continue, iris to go deeper | `transition-monotony` |
-| Everything bounces | Springs used as decoration | Overshoot only where the material would; paper does not bounce | review (filmstrip) |
-| Every number counts up, every line types itself | Effects applied because they exist | `countUp` for the one number that matters; `typewriter` only for things that are actually typed | review |
+| An effect on every beat: stamps, shakes, typed text, split letters | Effects applied because they exist | Pick the register first; most beats `rise`/`unveil`/`fade`, one or two signature moments (craft-and-direction §2.3) | `motion-accent-overuse` |
+| Three effects fighting inside one beat | Each helper added to make the beat "interesting" | One gesture per beat; fix the composition instead | `motion-busy` |
+| A different flashy transition at every click (iris, zoom, blur, cover…) | The transition menu used as a tour | `fade`, `cut`, `match`, `camera` for most changes; at most two showy types, each on a story turn | `transition-variety` |
+| Everything bounces | Springs and `snap` used as decoration | Critically damped springs and `ease.out`; overshoot only in a play register | `motion-bounce` |
+| Things fly in from off-stage | Large travel instead of a mask or camera | 8–40 px lift, `unveil` masks, `camera` for big moves | `motion-travel` |
+| Short, snappy 250 ms pops | Library defaults | 700–1100 ms entrances on a long deceleration, then hold | review (filmstrip) |
+| Every number counts up, every line types itself | Effects applied because they exist | `countUp` for the one number that matters; `typewriter` only for things that are actually typed | `motion-accent-overuse` |
 | Endless decorative loops (pulsing dots, floating blobs) | "Make it feel alive" filler | At most one `ambient` loop that means something (a caret, a live indicator) | review |
-| Motion that starts after a blank pause on every beat | Long uniform delays | The first frame of each beat should already show something; vary the first delay | review (filmstrip) |
+| Motion that starts after a blank pause on every beat | Long uniform delays | The first frame of each beat should already show something | review (filmstrip) |
+| A long deck where nothing ever stands out | Restraint mistaken for absence | Give the turn of the story one gesture of its own | `motion-no-signature` |
 
 ---
 
@@ -165,7 +167,7 @@ Run this on the contact sheet (`snapshot.mjs`), the motion filmstrip (`filmstrip
 3. **Speaker test:** read every `say` aloud. Would *this* speaker say it, in this room? Cut any sentence that sounds like a press release.
 4. **Glance test:** look at the contact sheet for five seconds. Do beats share one visual system *and* differ in composition? Any beat that looks like a template default?
 5. **Claim test:** read only the headlines in order. Do they tell the story as claims, without the body text?
-6. **Motion test:** read `filmstrip.png` row by row. Could you tell which beat is which with the text hidden, from how it moves alone? Does the signature move appear, and only where it means something?
+6. **Motion test:** read `filmstrip.png` row by row. Does each motion help the audience read the beat in the right order, and would the beat be worse without it? Is there exactly one or two moments that shout, and are they where the story turns?
 7. **Need-to-know test:** for every fact on stage, ask whether this audience would understand or act differently without it. Revision history, review rounds, tooling, and submission notes almost never pass.
 
 ---

@@ -15,7 +15,7 @@ Each proposal must inhabit a different physical or conceptual world—never thre
 3. **Typography Voice**: Display/serif/sans/mono pairing tuned to the subject (with realistic CJK/Latin system fallbacks for offline headless rendering).
 4. **Visual Signature**: One recurring structural motif or camera move that belongs uniquely to this topic (e.g., a vertical day/night split line, a continuous ledger spine, a zooming microscope reticle).
 5. **Primary Card-Free Archetype**: Which structural composition archetype(s) from Section 3 anchor the deck without falling back on boxed cards.
-6. **Motion Personality**: How this world moves (see §2): its material, the 2–3 beat changes it uses, its entrance and emphasis verbs, its easing signature, and its one signature move.
+6. **Motion Register**: How this deck moves (see §2): the register for this kind of presentation, the default entrance and beat change, and the one or two signature moments (which beats, which gesture, why there).
 7. **Copy Voice**: Who is speaking, in what register (plain-spoken engineer, editorial narrator, founder pitching), and a short list of words this speaker would never say. Draw the banned list from [ai-tells.md](ai-tells.md) plus anything the user's industry overuses.
 
 ### Alignment Protocol
@@ -24,56 +24,73 @@ Each proposal must inhabit a different physical or conceptual world—never thre
 
 ---
 
-## 2. Motion: Personality, Tier, Transitions, Rhythm
+## 2. Motion: Fit First, Restraint Always
 
-Motion is where decks most often look machine-made. Left alone, every element fades in and drifts up 20px on the same curve, every beat cross-fades into the next, and the audience learns the pattern by the third slide. Decide motion the same way you decide palette: from the subject's material, once, before writing choreography.
+Motion is where decks most often look cheap. The cause is almost never too little motion; it is effects used as decoration: a stamp on every claim, letters bouncing in, a different flashy transition at every click, things flying across the stage. Audiences read that as a template showing off, and it pulls their eyes away from the speaker. Premium motion is mostly invisible: soft, consistent, precisely timed, and it spends its one loud gesture on the moment the story turns.
 
-### 2.1 Motion personality (character)
+Decide motion in three steps, in this order: **register** (from what the talk is for), **beat intent** (from what each beat does), **signature** (one or two moments only). Then apply the craft defaults in §2.4.
 
-A **tier** says how much moves; a **personality** says *how* it moves. Every direction proposal names one. Derive it from what the world is made of:
+### 2.1 Register: what is this presentation for?
 
-| World material | Beat changes | Entrance verbs | Emphasis / signature | Easing & tempo |
-| :--- | :--- | :--- | :--- | :--- |
-| **Paper / dossier / print** | `cut`, `wipe-*` | `wipe` a line at a time, slide in from the margin | `stamp` with `shake`, `strike` | short, firm `out`; no overshoot; holds between actions |
-| **Machine / instrument / dashboard** | `push-*`, `cut` | `spring` with high stiffness, snap into detents | needle swing, `countUp` with a detent spring | fast in, crisp settle; small overshoot |
-| **Film / documentary / editorial** | `blur` (rack focus), `camera`, `cut` | `splitText` by word, `iris` | `zoom` through a detail, `match` cut | slow `inOut`, long holds, one fast cut for the turn |
-| **Map / journey / process** | `iris`, `camera` with `data-depth` | `draw` the route | `followPath` marker, `match` it into the next beat | eased travel, stops land with a soft spring |
-| **Software / product** | `match` between states, `cover-*` | panels `cover` in, `wipe` new rows | `cursor` with clicks that change the UI | quick (200–400 ms), linear-feeling, no bounce |
-| **Play / consumer / game** | `zoom`, `push-up` | `stagger` with `from: "random"` and a loose `spring` | squash on impact, `ambient` idle loop | loose springs (damping 6–12), lively tempo |
-| **Data / research** | `fade`, `match` | `draw` axes then data | `morph` one chart state into the next | measured `inOut`; motion only where the data changes |
+The register sets the deck's whole motion budget. Name it in the direction proposal and in the `MOTION` comment.
 
-Write the result into the deck's `MOTION` block (default transition, named easings, default spring) and keep it there. One deck uses **2–3 beat-change types** and **one signature move** that belongs to this subject alone (the stamp, the route marker, the rack focus). Everything else stays quiet so the signature lands.
+| Presentation | Register | Default beat change | Default entrance | Signature budget | Avoid |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **Investor / business pitch** | Confident, calm | `dip`, `cut` at the turn | `rise`, `unveil` on the headline | 1–2: the problem landing, the key number | stamps, shakes, typed text, bounce |
+| **Research / thesis / academic** | Precise, explanatory | `dip`, `match` between chart states | `rise`; data `draw`n in order | 1: the finding (a `morph` or `draw`) | anything that moves without meaning |
+| **Product / software demo** | Clear, functional | `match` between UI states, `dip` | panels `rise`; real UI state changes | 1–2: the moment the product does the thing (`cursor` once) | fake typing everywhere, zooms |
+| **Story / documentary / brand** | Cinematic, paced | `dip` (fade through black), `camera` pans, one hard `cut` | `unveil`, slow `rise` with long holds | 2: the reveal, the turn | fast tempo, bounce |
+| **Teaching / class / training** | Patient, stepwise | `dip`, `camera` along one diagram | `rise` one point at a time; `focus` the current step | 1: the "aha" step | anything fast or decorative |
+| **Game / consumer launch / event** | Lively, playful | `push-*`, `zoom`, `cut` | springs with a little overshoot allowed | 2–3 | still no effect on every beat |
 
-### 2.2 Motion tier (density)
+If the deck's world has a material (a dossier, a map, a factory floor), let it flavour the *signature* only: a paper world may stamp once at the verdict, a map world draws its route, a machine world lets one gauge snap. The material never licenses an effect on every beat.
 
-| Tier | Motion Grammar | Best Suited For |
+### 2.2 Beat intent: what does this beat do?
+
+Choose each beat's motion from its job, not from the helper list. The quiet column is the default; the accent column is only for a beat you have chosen as a signature moment.
+
+| The beat… | Quiet (default) | Accent (signature beats only) |
 | :--- | :--- | :--- |
-| **`Measured`** | One action per beat, long holds, slow camera glides, hard cuts at turns. Few or zero loops. | Luxury editorial talks, archival dossiers, minimalist essays, board briefings. |
-| **`Choreographed`** | 2–3 sequenced actions per beat via `at(ms, fn)`, drawn paths, roll-ups, persistent protagonists carried across beats with `match`. | Product demos, conference keynotes, research findings, technical walkthroughs. |
-| **`Kinetic`** | Dense beat timelines, cursor interactions, stamps and impacts, random staggers, split type, `liveOnly` ambient motion. | Game showcases, consumer launches, interactive trailers, high-energy pitch reels. |
+| states a headline or thesis | `unveil` the headline, `rise` the support | `splitText` by word with a slow, even stagger |
+| lists points or options | `rise` with `each: 80–120`, one at a time | none; build it across beats instead |
+| compares before / after, A vs B | `match` the shared element; `focus` the winner | `wipe` the old state away, `strike` the replaced claim |
+| lands a key number | `countUp` (1.2–1.8 s, `ease: "out"`), then hold | a single `draw` underline or ring |
+| shows change over time / data | `draw` axes then series; `morph` between states | `followPath` a marker along the trend |
+| goes deeper into a detail | `camera` move into it, or `zoom` with `origin` | `iris` from the detail |
+| turns the story, delivers a verdict | a hard `cut`, then stillness | `stamp` (only if something is literally approved or stamped) |
+| demonstrates a product | real state change with `match` | `cursor` with one meaningful click |
+| breathes, recaps, closes | `dip`, long hold, almost nothing moves | none |
 
-### 2.3 Beat changes (`MOTION.transition`, `beat.transition`)
+### 2.3 Budget and rhythm
 
-Every beat change is a story decision. Pick it from what the story does at that boundary, not from the default:
+- **Most beats are quiet.** About three quarters of the beats use only `rise`, `unveil`, `focus`, `draw`, `countUp` or `morph`, and change with `fade`, `dip`, `cut`, `match` or `camera`.
+- **One or two signature moments per deck** (about one per six beats). Lint: `motion-accent-overuse` counts beats that use stamp, shake, iris, cursor, typewriter or split type.
+- **One gesture per beat.** If a beat needs three effects to be interesting, the composition is the problem. Lint: `motion-busy`.
+- **At most two showy beat-change types per deck**, each tied to a story turn. Lint: `transition-variety`.
+- **Bounce is a register choice, not a default.** The default spring is critically damped and `ease.out` does not overshoot. Lint: `motion-bounce`.
+- **Small travel.** Entrances move 8–40 px; large travel belongs to the camera. Lint: `motion-travel`.
+- **Still is a move.** After the signature moment, hold. A beat where nothing moves for two seconds after one reveal reads as confidence.
+- **Not nothing at all.** A long deck with no signature moment feels flat. Lint: `motion-no-signature`.
 
-| The story here… | Use | Notes |
+### 2.4 Craft defaults (what "premium" means in numbers)
+
+| Property | Premium range | Cheap tell |
 | :--- | :--- | :--- |
-| turns, delivers a verdict, contradicts | `cut` | The strongest change is often none. Let the new beat's first action carry the energy. |
-| continues with the same subject | `match` (shared `data-match` elements fly to their new place) or `camera` (pan the `#world`) | Keeps the audience's eye on one protagonist. |
-| goes deeper into a detail | `iris` (with `origin: "#selector"`) or `zoom` (with `origin`) | The origin should be the thing you zoom into. |
-| moves forward in time or sequence | `push-left` / `push-up` | Going back automatically plays it in reverse. |
-| lays something new over the last thing | `cover-*` / `reveal-*` | Panels, documents, layers. |
-| replaces a statement | `wipe-*` | Hard-edged; pairs well with `strike`. |
-| shifts focus or mood | `blur` | A rack focus; use sparingly. |
-| needs nothing special | `fade` | Fine as a default, never on every beat (lint: `transition-monotony`). |
+| Entrance duration | 700–1100 ms | 200–400 ms pops |
+| Beat change | 640–900 ms `dip` (out, then in, through the background; the default); `fade` only when the two layouts share most of their content; or a true `cut` | 300 ms slides on every click |
+| Easing | `MOTION.ease.out` = `cubic-bezier(0.16, 1, 0.3, 1)`; `inOut` for camera | overshoot (`snap`, loose springs) everywhere |
+| Distance | 8–40 px lift; masks instead of travel | elements flying in from off-stage |
+| Stagger | 70–120 ms, from the reading start, ≤ 6 items | 30 ms machine-gun letters, random order |
+| Blur | ≤ 6 px, on entrances only | blur used as a transition style |
+| Scale | 0.98–1.02 on entrance | zoom pops, scale 1.5 → 1 |
+| Rotation | none (a stamp may tilt 2–3°) | spinning anything |
+| Simultaneity | one thing moves at a time, the rest is still | everything animates at once |
 
-### 2.4 Rhythm
+Write the chosen register, transition and easings into the deck's `MOTION` block. The skeleton's defaults already follow this table.
 
-- **Vary tempo.** Alternate a busy beat with a still one. A beat with one slow action after a dense beat reads as emphasis.
-- **Vary direction and origin.** Staggers can run `from: "center"`, `"end"`, `"edges"`, `"random"` or an index, not only left to right.
-- **Exits matter.** The leaving beat keeps its final frame during the change; choose a change that moves it with intent (push it away, wipe over it, zoom through it).
-- **Count the gestures.** No two consecutive beats should use the same entrance gesture with the same easing (lint: `motion-repeat`). If 3 of 4 beats only fade and slide, the deck has no motion design yet (lint: `motion-flat`).
-- **Watch it, don't imagine it.** `snapshot.mjs` only sees the final frame. Run `filmstrip.mjs` and read each row left to right: is the first frame of a beat already interesting, does something different happen in each beat, does the signature move land?
+### 2.5 Watch it, don't imagine it
+
+`snapshot.mjs` only sees the final frame. Run `filmstrip.mjs` and read each row: does the motion help the audience read the beat in the right order? Would the beat be worse with no motion at all? If not, remove it. Does the signature moment land, and is it the only one that shouts?
 
 ---
 
@@ -174,32 +191,25 @@ All helpers arrive in `CHOREO[id](scene, helpers)`. Every one is `?still`-safe (
 | :--- | :--- | :--- |
 | `at(ms, fn, { liveOnly })` | Schedule a step inside the beat. | Sequencing; `liveOnly` loops. |
 | `tween(el, keyframes, { ms, delay, ease })` | Web Animations keyframes, held at both ends. One tween per property per element per beat; chain with keyframe offsets. | Any custom move. |
-| `spring(el, keyframes, { stiffness, damping, mass, delay })` | Real damped-spring settle (overshoot included). | Physical arrivals, snaps, squash. |
+| `spring(el, keyframes, { stiffness, damping, mass, delay })` | Real damped-spring settle. The default is critically damped (no bounce); lower `damping` only in a play register. | Physical arrivals, snaps. |
+| `rise(els, { y, ms, each, delay, blur })` | **Quiet default.** Short lift with a fade on a long deceleration, staggered. | Most content on most beats. |
+| `unveil(el, { from, ms, delay })` | **Quiet.** Text rises out of its own baseline mask. | Headlines, key statements (one per beat). |
+| `focus(keep, { dim, within })` | **Quiet emphasis.** Everything marked `data-focus` (or `within`) recedes except `keep`. | Pointing at one item without effects. |
 | `stagger(els, (el, delay, i) => …, { each, from, delay, seed })` | Offsets a group; `from`: `start`, `end`, `center`, `edges`, `random` (seeded), or an index. | Crowds, grids, letters. |
-| `splitText(el, { by: "char" \| "word" })` | Wraps text in inline-block spans (keeps `<br>`), returns them. Use `char` for CJK. | Kinetic type with `stagger`. |
-| `wipe(el, { from })` / `iris(el, { x, y })` | Hard-edged clip reveal / circular aperture. | Replacing statements, revealing photos. |
-| `stamp(el, { rotate, impact })` / `shake(el, { amp })` | Ink-stamp hit, optional jolt of another element. | Verdicts, approvals, impacts. |
+| `splitText(el, { by: "char" \| "word" })` | **Accent.** Wraps text in inline-block spans (keeps `<br>`), returns them. Use `char` for CJK. | Kinetic type with `stagger`. |
+| `wipe(el, { from })` / `iris(el, { x, y })` | Hard-edged clip reveal / circular aperture (**accent**). | Replacing statements, revealing photos. |
+| `stamp(el, { rotate, impact })` / `shake(el, { amp })` | **Accent.** Ink-stamp hit, optional jolt of another element. | Something literally stamped or approved, once per deck. |
 | `strike(el, { color, thickness })` | Draws a rule through text. | Corrections, before/after. |
 | `draw(path, ms, { delay, ease })` | Stroke drawing. | Routes, signatures, chart lines. |
 | `followPath(svgEl, path, { rotate })` | Moves an SVG element along a path. | Journeys, flows, a marker riding a chart. |
 | `morph(path, toD, { fromD })` | Interpolates two `d` strings with the same command structure. | Chart state changes, shapes that transform. |
-| `cursor(pointer, steps)` | Moves a pointer through `[x, y]` / `{ x, y, click, onClick, hold }` steps and presses. | Product walkthroughs. |
+| `cursor(pointer, steps)` | **Accent.** Moves a pointer through `[x, y]` / `{ x, y, click, onClick, hold }` steps and presses. | Product walkthroughs. |
 | `countUp(el, to, ms, opts)` / `typewriter(el, text, ms)` | Number roll-up / typed text. Typewriter only for things that are actually typed. | Metrics, search boxes, commands. |
 | `ambient(el, keyframes, { ms })` | Infinite idle loop, live only. | A blinking caret, a slow breathing glow. |
 | `data-depth="0.4"` (markup) | Parallax: drifts at that fraction of a `cam` move. | Depth during `camera` changes. |
 | `data-match="key"` (markup) | Pairs elements across beats for the `match` change. | Persistent protagonists. |
 
-`examples/motion-gallery/deck.html` shows each beat change and helper once, with when to use it.
-
---- | :--- | :--- |
-| **`at(ms, fn, { liveOnly })`** | Sequences beat actions at explicit millisecond offsets (e.g., `0ms` camera settle, `280ms` path draw, `620ms` stamp). | Non-`liveOnly` runs immediately in order; `liveOnly` skipped. |
-| **Persistent protagonist** | Shared DOM/SVG element anchored in `#world` or `#stage` whose class/transform evolves across consecutive beats. | Snaps directly to target transform/state. |
-| **`draw` (`stroke-dashoffset`)** | Animates SVG strokes from `offset = totalLength` to `0` to trace connectors, signatures, routes, or chart curves. | Sets `stroke-dashoffset: 0` immediately. |
-| **`countUp`** | Rolls key numbers from `0` (or prior value) to the verified target figure using `requestAnimationFrame` easing. | Writes the final formatted target number immediately. |
-| **`typewriter`** | Reveals command lines, queries, or dialogue character-by-character or token-by-token. | Renders full final string immediately. |
-| **`cursor`** | Moves a crisp SVG pointer along waypoints and triggers hover/click ripples on UI targets before a state flip. | Lands at final target waypoint with clicked state applied. |
-| **`stamp` / `strike` / `wipe`** | Tactile editorial gestures: ink-stamp impact (`scale(1.25)->1`), horizontal redaction/strikethrough rule, or `clip-path` mask reveal. | Applies settled `scale(1)`, full strike width, and open `clip-path`. |
-| **`ambient` (`liveOnly: true`)** | Subtle idle pulse, film-grain drift, blinking caret, or floating telemetry once the beat has settled. | Omitted (`liveOnly: true`) so static exports stay razor-sharp. |
+`examples/motion-gallery/deck.html` shows each beat change and helper once, with when to use it. It is a catalogue, deliberately denser than any real deck should be; size a real deck's motion with §2.
 
 ---
 

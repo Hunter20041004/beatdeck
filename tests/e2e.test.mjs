@@ -689,7 +689,7 @@ async function runTests() {
     console.log('   Stage-fit / controls lint failures caught.');
 
     // 13) Motion: gallery passes strict lint, helpers settle under ?still, beat changes play and clean up,
-    //     filmstrip renders, and lint flags a deck where every beat fades up the same way.
+    //     filmstrip renders, lint flags effect excess and asks a quiet deck for one signature moment.
     console.log('13) Checking motion helpers, beat changes, filmstrip and motion lint...');
     const galleryLint = runNode('scripts/lint.mjs', [MOTION_DECK, '--strict', '--json']);
     assert.equal(galleryLint.status, 0, `motion gallery must pass lint --strict:\n${galleryLint.stdout}${galleryLint.stderr}`);
@@ -743,23 +743,34 @@ async function runTests() {
     assert.equal(strip.status, 0, strip.stderr);
     assert.ok(fs.existsSync(path.join(stripDir, 'filmstrip.png')) && fs.existsSync(path.join(stripDir, 'motion-05.png')));
 
-    const flatPath = path.join(tmpDir, 'flat-motion', 'deck.html');
-    assert.equal(runNode('scripts/new-deck.mjs', [flatPath, '--ids', 'a,b,c,d,e,f']).status, 0);
-    const flatSrc = fs.readFileSync(flatPath, 'utf8').replace(
-      /\/\/ "a": \(scene[\s\S]*?\/\/ \},/,
-      ['a', 'b', 'c', 'd', 'e', 'f']
-        .map((id) => `"${id}": (scene, { tween }) => { tween(scene.querySelectorAll("h1, p"), { opacity: [0, 1], transform: ["translateY(20px)", "none"] }, { ms: 500 }); },`)
-        .join('\n')
+    // A deck that throws effects at every beat must be flagged as excessive...
+    const ids6 = ['a', 'b', 'c', 'd', 'e', 'f'];
+    const makeFixture = (name, choreo, changes) => {
+      const file = path.join(tmpDir, name, 'deck.html');
+      assert.equal(runNode('scripts/new-deck.mjs', [file, '--ids', ids6.join(',')]).status, 0);
+      let src = fs.readFileSync(file, 'utf8');
+      const before = src;
+      src = src.replace(/\/\/ "a": \(scene[\s\S]*?\/\/ \},/, ids6.map((id) => `"${id}": ${choreo},`).join('\n'));
+      if (changes) ids6.forEach((id, k) => { src = src.replace(`{ id: "${id}",`, `{ id: "${id}", transition: "${changes[k % changes.length]}",`); });
+      assert.notEqual(src, before, `${name} fixture must inject choreography`);
+      fs.writeFileSync(file, src, 'utf8');
+      return file;
+    };
+    const loudPath = makeFixture(
+      'loud-motion',
+      '(scene, { spring, stamp, shake, splitText, stagger }) => { const h = scene.querySelector("h1"); stagger(splitText(h), (el, delay) => spring(el, { translate: ["0 300px", "0 0"] }, { delay, damping: 8 }), { each: 30 }); stamp(scene.querySelector("p"), { impact: h }); }',
+      ['iris', 'zoom', 'push-left', 'blur', 'cover-up']
     );
-    assert.notEqual(flatSrc, fs.readFileSync(flatPath, 'utf8'), 'flat-motion fixture must inject choreography');
-    fs.writeFileSync(flatPath, flatSrc, 'utf8');
-    const flatLint = runNode('scripts/lint.mjs', [flatPath, '--json']);
-    const flatTypes = new Set(JSON.parse(flatLint.stdout).warnings.map((w) => w.type));
-    for (const t of ['motion-flat', 'motion-repeat', 'motion-one-ease', 'transition-monotony']) {
-      assert.ok(flatTypes.has(t), `lint must flag ${t} on a deck that fades every beat up the same way (got ${[...flatTypes].join(', ')})`);
+    const loudTypes = new Set(JSON.parse(runNode('scripts/lint.mjs', [loudPath, '--json']).stdout).warnings.map((w) => w.type));
+    for (const t of ['motion-accent-overuse', 'motion-busy', 'motion-bounce', 'motion-travel', 'transition-variety']) {
+      assert.ok(loudTypes.has(t), `lint must flag ${t} on a deck that uses effects everywhere (got ${[...loudTypes].join(', ')})`);
     }
-    const noMotion = JSON.parse(runNode('scripts/lint.mjs', [flatPath, '--json', '--motion=false']).stdout);
-    assert.ok(!noMotion.warnings.some((w) => /^motion-|transition-monotony/.test(w.type)), '--motion=false must skip the motion pass');
+    // ...while a quiet deck passes the excess checks and is only asked for one signature moment.
+    const quietPath = makeFixture('quiet-motion', '(scene, { rise, unveil }) => { unveil(scene.querySelector("h1")); rise(scene.querySelectorAll("p"), { delay: 200 }); }');
+    const quietTypes = JSON.parse(runNode('scripts/lint.mjs', [quietPath, '--json']).stdout).warnings.map((w) => w.type).filter((t) => /^motion-|^transition-/.test(t));
+    assert.deepEqual(quietTypes, ['motion-no-signature'], `a quiet deck must only be asked for a signature moment (got ${quietTypes.join(', ')})`);
+    const noMotion = JSON.parse(runNode('scripts/lint.mjs', [loudPath, '--json', '--motion=false']).stdout);
+    assert.ok(!noMotion.warnings.some((w) => /^motion-|^transition-/.test(w.type)), '--motion=false must skip the motion pass');
     console.log('   Motion checks passed.');
 
     console.log('ALL E2E TESTS PASSED');

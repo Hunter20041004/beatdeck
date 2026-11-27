@@ -15,6 +15,15 @@
 | **單一資料來源** | 投影片與講稿分開寫，改完就不同步 | 只能輸出影片，無法直接上台簡報 | 同一份 HTML 同時產出現場簡報、備忘錄、講稿、PDF、分享檔與 MP4 |
 | **執行環境** | 辦公軟體或雲端簡報服務 | Node + 打包器 + React 生態系 | 純原生 HTML/CSS/JS ＋ Playwright Chromium（輸出 MP4 時另需 `ffmpeg`） |
 
+### v1.6 新增亮點：適合內容的動態
+
+- **預設克制**：v1.5 加了很多特效，結果簡報把每一種都用上，看起來很廉價。現在先依簡報的**用途**決定動態基調（提案、研究報告、產品展示、故事、教學、遊戲發表），大部分頁面保持安靜，特效只留給一兩個「招牌時刻」。見 [`references/craft-and-direction.md`](references/craft-and-direction.md) §2。
+- **安靜的新動作**：`rise`（小幅上移加淡入，長而柔的減速）、`unveil`（文字從自己的遮罩裡升起）、`focus`（其他內容淡下去，只留重點）。大部分頁面應該用這些。
+- **新換頁 `dip`**：先淡出再淡入，中間經過背景色，兩頁內容不會疊在一起。
+- **高級感的預設值**：換頁預設為 720 毫秒的 `dip`、柔和的減速曲線、不會彈跳的預設彈簧，`stamp` 與 `shake` 也變得更收斂。
+- **檢查工具改抓「用太多」**：`motion-accent-overuse`（太多頁用重點特效）、`motion-busy`（一頁裡特效互相打架）、`motion-bounce`（到處彈跳）、`motion-travel`（元素從很遠飛進來）、`transition-variety`（花俏換頁太多種），另外 `motion-no-signature` 提醒長簡報至少要有一個亮點。v1.5 那四個鼓勵「更多變化」的警告已移除。
+- **`upgrade-runtime.mjs`**：把舊簡報升級到新版執行環境，不動到設計。
+
 ### v1.5 新增亮點：動態設計更多元
 
 - **換頁不再只有淡入淡出**：骨架內建 11 種換頁方式（硬切、淡入、推移、覆蓋、揭開、擦除、光圈、穿越放大、模糊對焦、共用元素接續、鏡頭平移），每一拍可用 `transition` 指定，倒退時自動反向播放，舊頁會帶著最後畫面離場。
@@ -150,6 +159,9 @@ node <skill-dir>/scripts/snapshot.mjs <path/to/hero.html> --raw [--out dir]
 
 # 1c. 動態膠捲：每一拍在 0～2.6 秒間的多個時間點各截一張，檢查動畫本身
 node <skill-dir>/scripts/filmstrip.mjs <path/to/deck.html> [--beats 2-4] [--times 0,120,280,500,900,1500,2600] [--slow 4] [--out dir]
+
+# 1d. 把舊簡報升級到新版執行環境（不動設計）
+node <skill-dir>/scripts/upgrade-runtime.mjs <path/to/deck.html> [--out new.html]
 
 # 2. 從 BEATS 匯出含時間軸與講者統計的 Markdown 講稿（未指定 --out 時直接輸出至 stdout）
 node <skill-dir>/scripts/script-export.mjs <path/to/deck.html> [--out script.md] [--rate 3.6]

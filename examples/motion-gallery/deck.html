@@ -344,7 +344,9 @@
 
   // ============ CONTENT: single source of truth ============
   // lintAllow: narration-wide lint exemptions, e.g. ["contrast-frame"]; see references/ai-tells.md §7.
-  const META = { title: "Beatdeck 動態目錄", subtitle: "十二種換頁與動作，各自適合的時機", lang: "zh-Hant", width: 1920, height: 1080, speechRate: 3.6, lintAllow: [] };
+  // This is a catalogue that shows every effect once, so it deliberately breaks the motion budget.
+  // A real deck should not copy its density: see references/craft-and-direction.md §2.
+  const META = { title: "Beatdeck 動態目錄", subtitle: "十二種換頁與動作，各自適合的時機", lang: "zh-Hant", width: 1920, height: 1080, speechRate: 3.6, lintAllow: ["motion-accent-overuse", "motion-busy", "motion-bounce", "motion-travel", "transition-variety"] };
 
   // One idea + one visual change per beat. `cam` positions the #world camera (logical px + zoom).
   const BEATS = [
@@ -605,6 +607,9 @@
     return EASE_FN[e] || EASE_FN.out;
   }
 
+  // Lint hook: records which helper each beat used, so lint can count accents. No-op in a normal show.
+  const note = (kind) => { const l = window.__bdHelperLog; if (l) l.push({ beat: window.__bdMotionBeat === undefined ? -1 : window.__bdMotionBeat, kind }); };
+
   // ---- WAAPI helpers: every Animation is tracked per scene, finished when the beat is left,
   // cancelled when the beat is entered again, and jumped to its end under ?still. ----
   const sceneAnims = new Map();
@@ -642,7 +647,7 @@
     const spring = isSpring(opts.ease);
     const duration = opts.ms || (spring ? springCurve(opts.ease).duration : 600);
     return toEls(target).map((el) => {
-      const anim = track(el.animate(keyframes, { duration, delay: opts.delay || 0, easing: cssEase(opts.ease), fill: "both" }));
+      const anim = track(el.animate(keyframes, { duration, delay: opts.delay || 0, easing: cssEase(opts.ease), fill: "both", id: opts.kind || "tween" }));
       if (isStill) anim.finish();
       return anim;
     });
@@ -651,7 +656,7 @@
   // spring(target, keyframes, { stiffness, damping, mass, delay }) — physical settle with real overshoot.
   function spring(target, keyframes, opts = {}) {
     const sp = { stiffness: opts.stiffness || MOTION.spring.stiffness, damping: opts.damping || MOTION.spring.damping, mass: opts.mass || MOTION.spring.mass };
-    return tween(target, keyframes, { ...opts, ease: sp, ms: opts.ms });
+    return tween(target, keyframes, { kind: "spring", ...opts, ease: sp, ms: opts.ms });
   }
 
   // stagger(targets, fn(el, delayMs, i), { each, from: "start"|"end"|"center"|"edges"|"random"|index, delay, seed })
@@ -679,6 +684,7 @@
   // Returns the spans. Use "char" for CJK. Idempotent: calling again returns the same spans.
   function splitText(el, opts = {}) {
     if (!el) return [];
+    note("splitText");
     const by = opts.by || "char";
     if (el.dataset.split === by) return Array.from(el.querySelectorAll(":scope .bd-split"));
     const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
@@ -702,39 +708,80 @@
     return Array.from(el.querySelectorAll(":scope .bd-split"));
   }
 
+  // rise(targets, { y: 18, ms: 900, each: 70, delay, blur: false, from }) — the quiet, premium entrance:
+  // a short lift with a fade on a long deceleration. Use it for most content; it is meant to be invisible.
+  function rise(targets, opts = {}) {
+    const y = opts.y === undefined ? 18 : opts.y;
+    const kf = { opacity: [0, 1], translate: [`0 ${y}px`, "0 0"] };
+    if (opts.blur) kf.filter = [`blur(${opts.blur === true ? 6 : opts.blur}px)`, "blur(0px)"];
+    note("rise");
+    const out = [];
+    stagger(targets, (el, d) => out.push(...tween(el, kf, { ms: opts.ms || 900, ease: opts.ease || "out", delay: d, kind: "rise" })),
+      { each: opts.each === undefined ? 70 : opts.each, delay: opts.delay || 0, from: opts.from });
+    return out;
+  }
+
+  // unveil(target, { from: "bottom", ms: 1000, delay, ease }) — editorial line reveal: the text rises out of
+  // its own baseline mask. Use for headlines and key statements; one per beat at most.
+  const UNVEIL_FROM = { bottom: ["inset(0 0 100% 0)", "0 0.5em"], top: ["inset(100% 0 0 0)", "0 -0.5em"], left: ["inset(0 100% 0 0)", "-0.4em 0"], right: ["inset(0 0 0 100%)", "0.4em 0"] };
+  function unveil(target, opts = {}) {
+    const [clip, off] = UNVEIL_FROM[opts.from || "bottom"] || UNVEIL_FROM.bottom;
+    note("unveil");
+    return tween(target, { clipPath: [clip, "inset(0 0 0 0)"], translate: [off, "0 0"] }, { ms: 1000, ease: "out", kind: "unveil", ...opts });
+  }
+
+  // focus(keep, { dim: 0.28, ms: 700, delay, within }) — emphasis without effects: everything else in the
+  // scene (or `within`) recedes so `keep` stands alone. Prefer this to stamps and shakes.
+  function focus(keep, opts = {}) {
+    const keepEls = toEls(keep);
+    const pool = opts.within ? toEls(opts.within) : Array.from((currentScene || document).querySelectorAll("[data-focus]"));
+    note("focus");
+    pool.filter((el) => !keepEls.includes(el) && !keepEls.some((k) => el.contains(k) || k.contains(el)))
+      .forEach((el) => tween(el, { opacity: [1, opts.dim === undefined ? 0.28 : opts.dim] }, { ms: opts.ms || 700, delay: opts.delay || 0, ease: "inOut", kind: "focus" }));
+    return keepEls;
+  }
+
   // wipe(target, { from: "left"|"right"|"top"|"bottom"|"center", ms, delay, ease }) — hard-edged clip reveal.
   const WIPE_FROM = { left: "inset(0 100% 0 0)", right: "inset(0 0 0 100%)", top: "inset(0 0 100% 0)", bottom: "inset(100% 0 0 0)", center: "inset(0 50% 0 50%)", middle: "inset(50% 0 50% 0)" };
   function wipe(target, opts = {}) {
-    return tween(target, { clipPath: [WIPE_FROM[opts.from || "left"] || WIPE_FROM.left, "inset(0 0 0 0)"] }, { ms: 700, ease: "inOut", ...opts });
+    note("wipe");
+    return tween(target, { clipPath: [WIPE_FROM[opts.from || "left"] || WIPE_FROM.left, "inset(0 0 0 0)"] }, { ms: 700, ease: "inOut", kind: "wipe", ...opts });
   }
 
   // iris(target, { x: "50%", y: "50%", ms, delay, ease }) — circular aperture opening from a point.
   function iris(target, opts = {}) {
     const p = `${opts.x || "50%"} ${opts.y || "50%"}`;
-    return tween(target, { clipPath: [`circle(0% at ${p})`, `circle(150% at ${p})`] }, { ms: 800, ease: "inOut", ...opts });
+    note("iris");
+    return tween(target, { clipPath: [`circle(0% at ${p})`, `circle(150% at ${p})`] }, { ms: 800, ease: "inOut", kind: "iris", ...opts });
   }
 
-  // stamp(target, { rotate: "-4deg", ms, delay, impact: element-to-shake }) — ink-stamp hit.
+  // stamp(target, { rotate: "-3deg", scale: 1.35, ms, delay, impact: element-to-shake }) — ink-stamp hit.
+  // An accent: only where something is literally stamped or approved, at most once or twice per deck.
   function stamp(target, opts = {}) {
-    const r = opts.rotate || "-4deg";
+    const r = opts.rotate || "-3deg";
+    const s0 = opts.scale || 1.35;
+    note("stamp");
     const anims = tween(target, [
-      { transform: `scale(1.9) rotate(${r})`, opacity: 0, filter: "blur(6px)", easing: "cubic-bezier(0.55, 0, 1, 0.45)" },
-      { transform: `scale(0.93) rotate(${r})`, opacity: 1, filter: "blur(0px)", offset: 0.55 },
+      { transform: `scale(${s0}) rotate(${r})`, opacity: 0, filter: "blur(4px)", easing: "cubic-bezier(0.55, 0, 1, 0.45)" },
+      { transform: `scale(0.97) rotate(${r})`, opacity: 1, filter: "blur(0px)", offset: 0.6 },
       { transform: `scale(1) rotate(${r})`, opacity: 1, filter: "blur(0px)" },
-    ], { ms: 420, ease: "linear", ...opts });
-    if (opts.impact) shake(opts.impact, { delay: (opts.delay || 0) + (opts.ms || 420) * 0.55, amp: opts.amp || 6 });
+    ], { ms: 460, ease: "linear", kind: "stamp", ...opts });
+    if (opts.impact) shake(opts.impact, { delay: (opts.delay || 0) + (opts.ms || 460) * 0.6, amp: opts.amp || 3 });
     return anims;
   }
 
-  // shake(target, { amp: 10, ms: 380, delay }) — decaying impact jolt on the `translate` property.
+  // shake(target, { amp: 5, ms: 380, delay }) — decaying impact jolt on the `translate` property.
+  // An accent for a physical impact the story actually has; never for "emphasis".
   function shake(target, opts = {}) {
-    const a = opts.amp || 10;
+    const a = opts.amp || 5;
+    note("shake");
     const steps = [1, -0.8, 0.6, -0.4, 0.22, -0.1, 0];
-    return tween(target, { translate: ["0 0", ...steps.map((s, i) => `${(s * a).toFixed(1)}px ${(i % 2 ? 0.4 : -0.4) * s * a}px`)] }, { ms: 380, ease: "linear", ...opts });
+    return tween(target, { translate: ["0 0", ...steps.map((s, i) => `${(s * a).toFixed(1)}px ${(i % 2 ? 0.4 : -0.4) * s * a}px`)] }, { ms: 380, ease: "linear", kind: "shake", ...opts });
   }
 
   // strike(target, { ms, delay, color, thickness: "0.09em" }) — a rule drawn through the text.
   function strike(target, opts = {}) {
+    note("strike");
     return toEls(target).map((el) => {
       let bar = el.querySelector(":scope > .bd-strike");
       if (!bar) {
@@ -745,13 +792,14 @@
         bar.style.cssText = `position:absolute;left:-0.06em;right:-0.06em;top:52%;height:${opts.thickness || "0.09em"};background:${opts.color || "currentColor"};transform-origin:0 50%;pointer-events:none;`;
         el.appendChild(bar);
       }
-      return tween(bar, { transform: ["scaleX(0)", "scaleX(1)"] }, { ms: 460, ease: "inOut", ...opts })[0];
+      return tween(bar, { transform: ["scaleX(0)", "scaleX(1)"] }, { ms: 460, ease: "inOut", kind: "strike", ...opts })[0];
     });
   }
 
   // draw(svgPath, ms, { delay, ease }) — stroke-dashoffset line drawing.
   function draw(pathEl, ms, opts = {}) {
     if (!pathEl) return;
+    note("draw");
     const len = pathEl.getTotalLength ? pathEl.getTotalLength() : 1000;
     pathEl.style.strokeDasharray = `${len}`;
     pathEl.style.strokeDashoffset = `${len}`;
@@ -762,6 +810,7 @@
   // (both inside the same <svg>). rotate: true turns it to face the direction of travel.
   function followPath(el, pathEl, opts = {}) {
     if (!el || !pathEl) return;
+    note("followPath");
     const len = pathEl.getTotalLength();
     const a = opts.from || 0;
     const b = opts.to === undefined ? 1 : opts.to;
@@ -784,6 +833,7 @@
   // structure (same commands, same number count). Mismatched shapes snap to the target.
   function morph(pathEl, toD, opts = {}) {
     if (!pathEl) return;
+    note("morph");
     const num = /-?\d*\.?\d+(?:e[-+]?\d+)?/gi;
     const fromD = opts.fromD || pathEl.getAttribute("d") || "";
     const a = (fromD.match(num) || []).map(Number);
@@ -801,6 +851,7 @@
   // pointer and adds .is-clicked to the target. One call per pointer per beat: chain clicks as steps.
   function cursor(pointerEl, steps, opts = {}) {
     if (!pointerEl || !steps || !steps.length) return;
+    note("cursor");
     const delay = opts.delay || 0;
     let t = 0;
     const moves = [];
@@ -814,7 +865,7 @@
     });
     const total = Math.max(t, 1);
     const moveEase = cssEase(opts.ease || "inOut");
-    tween(pointerEl, moves.map(({ t: mt, p }) => ({ offset: mt / total, translate: `${p.x}px ${p.y}px`, easing: moveEase })), { ms: total, delay, ease: "linear" });
+    tween(pointerEl, moves.map(({ t: mt, p }) => ({ offset: mt / total, translate: `${p.x}px ${p.y}px`, easing: moveEase })), { ms: total, delay, ease: "linear", kind: "cursor" });
     if (!presses.length) return;
     const d = Math.min(0.5, 110 / total);
     const kf = [{ offset: 0, scale: 1 }];
@@ -826,7 +877,7 @@
       kf.push({ offset: Math.min(1, Math.max(last, o + 2 * d)), scale: 1 });
     });
     if (kf[kf.length - 1].offset < 1) kf.push({ offset: 1, scale: 1 });
-    tween(pointerEl, kf, { ms: total, delay, ease: "linear" });
+    tween(pointerEl, kf, { ms: total, delay, ease: "linear", kind: "cursor" });
     presses.forEach(({ t: pt, p }) => at(delay + pt + 90, () => {
       if (p.click) p.click.classList.add("is-clicked");
       if (p.onClick) p.onClick();
@@ -836,6 +887,7 @@
   // ambient(target, keyframes, { ms, ease, alternate: true, delay }) — idle loop, live only (never in ?still).
   function ambient(target, keyframes, opts = {}) {
     if (isStill) return [];
+    note("ambient");
     return toEls(target).map((el) => track(el.animate(keyframes, {
       duration: opts.ms || 2400, delay: opts.delay || 0, easing: cssEase(opts.ease || "inOut"),
       iterations: Infinity, direction: opts.alternate === false ? "normal" : "alternate",
@@ -845,6 +897,7 @@
   // countUp(el, to, ms, { from, decimals, prefix, suffix, delay, ease }) — numeric roll-up.
   function countUp(el, to, ms, opts = {}) {
     if (!el) return;
+    note("countUp");
     const from = opts.from || 0;
     const d = opts.decimals || 0;
     const fmt = (v) => `${opts.prefix || ""}${v.toLocaleString(META.lang || undefined, { minimumFractionDigits: d, maximumFractionDigits: d })}${opts.suffix || ""}`;
@@ -855,13 +908,14 @@
   // typewriter(el, text, ms, { delay }) — reveal text character by character.
   function typewriter(el, text, ms, opts = {}) {
     if (!el) return;
+    note("typewriter");
     const chars = Array.from(text);
     el.textContent = "";
     animate(ms, (t) => { el.textContent = chars.slice(0, Math.round(chars.length * t)).join(""); }, { ...opts, ease: "linear" });
   }
 
   const helpers = {
-    at, animate, tween, spring, stagger, splitText, wipe, iris, stamp, shake, strike,
+    at, animate, tween, spring, stagger, splitText, rise, unveil, focus, wipe, iris, stamp, shake, strike,
     draw, followPath, morph, cursor, ambient, countUp, typewriter, isStill, isVideo,
   };
 
@@ -899,10 +953,10 @@
   function playTransition(fromEl, toEl, spec) {
     const type = spec.type || "fade";
     if (type === "cut") return;
-    const ms = spec.ms || (type === "camera" ? parseFloat(getComputedStyle(stage).getPropertyValue("--cam-ms")) || 900 : 560);
+    const ms = spec.ms || (type === "camera" ? parseFloat(getComputedStyle(stage).getPropertyValue("--cam-ms")) || 900 : 640);
     const easing = cssEase(spec.ease || (type === "fade" || type === "blur" ? "inOut" : "inOut"));
     const o = { duration: ms, easing, fill: "both" };
-    const run = (el, kf, opts = o) => { const a = el.animate(kf, opts); running.push(a); return a; };
+    const run = (el, kf, opts = o) => { const a = el.animate(kf, { ...opts, id: "bd-change" }); running.push(a); return a; };
     leaving = fromEl;
     fromEl.classList.add("is-leaving");
     const top = (el) => { if (el === fromEl) fromEl.classList.add("on-top"); };
@@ -919,6 +973,7 @@
     const radius = Math.hypot(Math.max(origin.x, W - origin.x), Math.max(origin.y, H - origin.y)) + 4;
     let main = null;
     if (type === "fade") main = run(toEl, { opacity: [0, 1] });
+    else if (type === "dip") { run(fromEl, { opacity: [1, 0] }, { ...o, duration: ms * 0.45 }); main = run(toEl, { opacity: [0, 1] }, { ...o, delay: ms * 0.45, duration: ms * 0.55 }); }
     else if (type === "push") { main = run(toEl, { transform: [off(-1), "none"] }); run(fromEl, { transform: ["none", off(1)] }); }
     else if (type === "cover") { main = run(toEl, { transform: [off(-1), "none"] }); run(fromEl, { transform: ["none", off(0.18)], filter: ["brightness(1)", "brightness(0.7)"] }); }
     else if (type === "reveal") { top(fromEl); main = run(fromEl, { transform: ["none", off(1)] }); run(toEl, { transform: [off(-0.18), "none"] }); }
