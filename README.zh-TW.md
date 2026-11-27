@@ -11,9 +11,20 @@
 | :--- | :--- | :--- | :--- |
 | **視覺結構** | 一頁頁割裂的方框與條列式清單 | React 時間軸元件與建置流程 | 每個主題自創一個 `1920×1080` 連續視覺舞台與無卡片構圖 |
 | **製作單位** | 靜態頁面排版 | 逐幀撰寫 JSX 動畫 | 敘事節拍（`BEATS`）搭配 `at()` 節拍內動態編排 |
-| **風格與主視覺** | 制式套版主題與預設轉場 | 手動刻寫元件動畫 | 先對齊 **2–3 種視覺世界提案** ＋ **主視覺精雕關卡** ＋ 3 階動態強度 |
+| **風格與主視覺** | 制式套版主題與預設轉場 | 手動刻寫元件動畫 | 先對齊 **2–3 種視覺世界提案** ＋ **主視覺精雕關卡** ＋ 動態基調與 2–3 個招牌時刻 |
 | **單一資料來源** | 投影片與講稿分開寫，改完就不同步 | 只能輸出影片，無法直接上台簡報 | 同一份 HTML 同時產出現場簡報、備忘錄、講稿、PDF、分享檔與 MP4 |
 | **執行環境** | 辦公軟體或雲端簡報服務 | Node + 打包器 + React 生態系 | 純原生 HTML/CSS/JS ＋ Playwright Chromium（輸出 MP4 時另需 `ffmpeg`） |
+
+### v1.7 新增亮點：冷測後的修正
+
+只照這份文件從零做一份新簡報（一個選課工具的提案，用真實截圖），找到十個不順的地方，v1.7 一次修掉：
+
+- **`fonts.mjs` 把字型嵌進簡報**：依簡報實際用到的字做子集化，並在簡報裡連結 `fonts/fonts.css`。lint、快照、分享檔和手機看到的會是同一套字。lint 另外會在文字落到簡報沒附的字型時給 `font-fallback` 提示（不會讓檢查失敗）。
+- **招牌時刻的數量全文統一**：兩到三個「內容本身會動」的時刻。移除殘留的「Motion Intensity Tier」說法。
+- **`carry(..., { size: true })`**：改動寬高，文字會重新排版，不會被拉扁；`scale` 仍保留給「縮進總結」的場合，文件寫明各自適用的情況。
+- **lint**：舞台上沒補的 `[missing: …]` 算 `placeholder` 警告（`--strict` 會擋）；`text-density` 不計 `aria-hidden` 的裝飾；`small-capture` 會讀 `data-capture-dpr`，精準判斷 2x 截圖的字夠不夠大。
+- **文件**：Route A 允許用真實資料在 DOM 忠實重建「招牌時刻要動的那一個產品元件」；方向提案那一步補上使用者不在線時怎麼做。
+- **`filmstrip.mjs --frames`** 另存每個時間點的全尺寸 PNG；觸控螢幕上自動隱藏 HUD。
 
 ### v1.6 新增亮點：適合內容的動態
 
@@ -151,6 +162,9 @@ npx serve .
 # 0. 產生已串好完整介面規範、不含視覺風格的簡報骨架
 node <skill-dir>/scripts/new-deck.mjs <path/to/deck.html> [--title "簡報標題"] [--lang zh-Hant] [--beats 6 | --ids a,b,c] [--force]
 
+# 0b. 把字型子集化後嵌進簡報（改完文案要重跑）
+node <skill-dir>/scripts/fonts.mjs <path/to/deck.html> --font "字型名稱:字重=/path/font.ttf" [--font …] [--out dir]
+
 # 1. 版面與介面規範檢查（零 console error、零破圖、零超框、零中英文意外斷行）＋設計警告
 node <skill-dir>/scripts/lint.mjs <path/to/deck.html> [--strict] [--json] [--motion=false]
 
@@ -159,7 +173,7 @@ node <skill-dir>/scripts/snapshot.mjs <path/to/deck.html> [--beats 1,3-5] [--col
 node <skill-dir>/scripts/snapshot.mjs <path/to/hero.html> --raw [--out dir]
 
 # 1c. 動態膠捲：每一拍在 0～2.6 秒間的多個時間點各截一張，檢查動畫本身
-node <skill-dir>/scripts/filmstrip.mjs <path/to/deck.html> [--beats 2-4] [--times 0,120,280,500,900,1500,2600] [--slow 4] [--out dir]
+node <skill-dir>/scripts/filmstrip.mjs <path/to/deck.html> [--beats 2-4] [--times 0,120,280,500,900,1500,2600] [--slow 4] [--frames] [--out dir]
 
 # 1d. 把舊簡報升級到新版執行環境（不動設計）
 node <skill-dir>/scripts/upgrade-runtime.mjs <path/to/deck.html> [--out new.html]

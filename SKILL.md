@@ -30,10 +30,11 @@ A deck is a short directed film on one `1920×1080` stage. Every deck invents it
 Follow this order; each step gates the next.
 
 1. **Gather.** Confirm the audience and the outputs needed (live talk, webcam PiP, share HTML, PDF, MP4). Pull real material from the user and the workspace.
-2. **Align the direction (ask once).** Propose 2–3 *genuinely different* visual worlds. For each, give the spatial metaphor, surface & palette, typography voice (with offline CJK/Latin fallbacks), visual signature, primary archetype, **motion register** (default entrance and beat change, and which one or two beats get the signature moment), and **copy voice** (who is speaking, in what register, and words this speaker would never use). Ask the user to pick, combine, or tweak. Skip asking only when told "decide for me" or when running non-interactively, and then state the chosen direction upfront. See [references/craft-and-direction.md](references/craft-and-direction.md).
+2. **Align the direction (ask once).** Propose 2–3 *genuinely different* visual worlds. For each, give the spatial metaphor, surface & palette, typography voice (with offline CJK/Latin fallbacks), visual signature, primary archetype, **motion register** (default entrance and beat change, and which two or three beats get a signature moment), and **copy voice** (who is speaking, in what register, and words this speaker would never use). Ask the user to pick, combine, or tweak. Skip asking only when told "decide for me" or when running non-interactively, and then state the chosen direction upfront. If the user may be away for a while (an async thread, a queued task), ask, then carry on with the direction you recommend while you wait, and switch if their answer differs. See [references/craft-and-direction.md](references/craft-and-direction.md).
 3. **Craft hero assets first.** Build focal visuals *before* writing the deck.
    - **Route A, real product/game/hardware:** capture genuine high-res screens or photos and stage them at 65–85% of the stage with hairline callouts. Never substitute CSS/SVG wireframes. Crop each capture to the region the beat talks about, so the UI text in it stays readable on a projector (≥ 18px on stage).
    - **Route B, nothing to screenshot:** build one high-craft route: architectural cross-section, multi-gradient character, tactile artifact, or full-stage editorial data viz.
+   - When a signature moment needs the product's own UI to move (a timetable re-planning, a list re-sorting), rebuild *that one component* in the DOM from the product's real data, colours and type, and show a real capture of the same state nearby. That is a faithful rebuild, not a wireframe.
    - Each asset must clear the **3-layer fidelity bar**: accurate silhouette, materiality/shading, and secondary micro-details.
    - **Gate:** put the asset in its own HTML page, run `snapshot.mjs <hero.html> --raw`, and inspect the PNG before moving on.
 4. **Scaffold and author.** Run `new-deck.mjs <deck.html> --title "…" --lang … --ids a,b,c` to get a contract-complete, style-free skeleton.
@@ -41,6 +42,7 @@ Follow this order; each step gates the next.
    - Fill `BEATS` with speakable `say` lines, using `pdfSkip: true` on intermediate micro-steps.
    - Give beats a `transition` where the story turns, continues, or goes deeper, and write each beat's choreography in `CHOREO[id]` with the helpers (`rise`, `unveil`, `focus` for the quiet default; `tween`, `spring`, `stagger`, `splitText`, `wipe`, `iris`, `stamp`, `strike`, `draw`, `followPath`, `morph`, `cursor`, `countUp`, `typewriter`, `ambient`, `at`). `examples/motion-gallery/deck.html` shows each one.
    - Lock intended line breaks with `<br>` / `data-expected-lines="K"`.
+   - Embed the deck's fonts with `fonts.mjs` (it subsets each face to the characters the deck uses and links `fonts/fonts.css`). Without it, lint, snapshots and every viewer render whatever font that machine happens to have; lint reports this as a `font-fallback` note. Re-run it after editing copy.
    - Write headlines as plain claims that say what happens. Avoid topic labels, metaphor equations, and the clipped two-beat slogan rhythm. Every number needs a source; mark anything missing as `[missing: …]` and ask the user instead of inventing it. Set `META.lang` (e.g. `zh-Hant`) so the language-specific checks run.
 5. **Lint until clean.** Run `lint.mjs <deck.html> --strict`; use `--json` when parsing the output. Errors cover overflow, unexpected wraps, broken images, runtime errors, and contract violations. Craft warnings cover:
    - **Layout:** the card shell, nested cards, text collisions, repeated layouts, screenshots shrunk too small to read, and leftover skeleton scenes.
@@ -53,7 +55,7 @@ Follow this order; each step gates the next.
    - **Audience:** a cold read that also checks archetype variety.
    - **Motion:** run `filmstrip.mjs <deck.html>` and open `filmstrip.png`: each row is one beat over its first ~2.6s. Check that beats move differently, the first frame is never empty, and the signature move lands.
    - **Speaker:** read the `say` lines aloud at 3.6 CJK chars/s or 2.5 Latin words/s, and toggle `C` to confirm the PiP corner stays clear.
-   - **Fact & layout:** every number is sourced, and lint is clean.
+   - **Fact & layout:** every number is sourced, and lint is clean. A `[missing: …]` mark on stage fails `--strict`, so nothing ships with a gap unnoticed.
    - Then run the human checklist in [references/ai-tells.md](references/ai-tells.md) §6 (swap, source, speaker, glance, claim, motion, need-to-know). Lint cannot judge whether a deck says something specific.
 7. **Export** what was asked for (table below). See [references/export-and-recording.md](references/export-and-recording.md).
 
@@ -89,9 +91,10 @@ Speaker notes (`N`), script Markdown, PDFs, and video timing all read from `BEAT
 | Purpose | Command |
 | :--- | :--- |
 | Scaffold contract skeleton | `new-deck.mjs <deck.html> [--title T] [--lang en] [--beats 6 \| --ids a,b,c] [--force]` |
+| Embed subset web fonts | `fonts.mjs <deck.html> --font "Family:weight=path" [--font …] [--out dir] [--extra chars] [--link=false]` |
 | Layout, contract, craft & motion lint | `lint.mjs <deck.html> [--strict] [--json] [--motion=false]` |
 | Beat PNGs + contact sheet / hero check | `snapshot.mjs <deck.html> [--beats 1,3-5] [--cols 4] [--bare] [--out dir]` · `snapshot.mjs <hero.html> --raw` |
-| Motion filmstrip (frames over time per beat) | `filmstrip.mjs <deck.html> [--beats 2-4] [--times 0,120,280,500,900,1500,2600] [--slow 4] [--out dir]` |
+| Motion filmstrip (frames over time per beat) | `filmstrip.mjs <deck.html> [--beats 2-4] [--times 0,120,280,500,900,1500,2600] [--slow 4] [--frames] [--out dir]` |
 | Timestamped speaker script (`講稿`) | `script-export.mjs <deck.html> [--out script.md] [--rate 3.6]` |
 | Slides or storyboard PDF | `pdf-export.mjs <deck.html> [--mode slides\|storyboard] [--cols 2] [--out deck.pdf]` |
 | Offline single-file share HTML | `bundle-share.mjs <deck.html> [--out deck-share.html]` |

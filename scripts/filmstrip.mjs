@@ -11,7 +11,7 @@ import {
 
 function printUsage() {
   console.error(
-    'Usage: node scripts/filmstrip.mjs <deck.html> [--beats 2-4] [--times 0,120,280,500,900,1500,2600] [--slow 4] [--out dir]'
+    'Usage: node scripts/filmstrip.mjs <deck.html> [--beats 2-4] [--times 0,120,280,500,900,1500,2600] [--slow 4] [--frames] [--out dir]'
   );
 }
 
@@ -47,7 +47,8 @@ function buildSheet(rows, meta) {
 }
 
 async function main() {
-  const { positional, flags } = parseCliArgs(process.argv.slice(2));
+  const { positional, flags } = parseCliArgs(process.argv.slice(2), new Set(['frames']));
+  const fullFrames = flags.frames === true;
   if (positional.length === 0) {
     printUsage();
     process.exit(1);
@@ -72,7 +73,9 @@ async function main() {
 
   const browser = await launchBrowser();
   try {
-    const context = await browser.newContext({ viewport: { width: 768, height: 432 }, deviceScaleFactor: 1 });
+    // --frames renders at full stage size and also saves every frame as its own PNG, for reading one moment closely.
+    const vp = fullFrames ? { width: 1920, height: 1080 } : { width: 768, height: 432 };
+    const context = await browser.newContext({ viewport: vp, deviceScaleFactor: 1 });
     await context.addInitScript(variableClockInitScript);
     const page = await context.newPage();
     const cdp = await context.newCDPSession(page);
@@ -106,9 +109,13 @@ async function main() {
         const left = await page.evaluate(([start, tgt]) => start + tgt - performance.now(), [t0, target]);
         if (left > 0) await page.waitForTimeout(left * slow);
         const before = await page.evaluate(() => performance.now());
-        const buf = await page.screenshot({ type: 'jpeg', quality: 82 });
+        const buf = await page.screenshot(fullFrames ? { type: 'png' } : { type: 'jpeg', quality: 82 });
         const after = await page.evaluate(() => performance.now());
-        frames.push({ ms: Math.round((before + after) / 2 - t0), dataUrl: `data:image/jpeg;base64,${buf.toString('base64')}` });
+        const ms = Math.round((before + after) / 2 - t0);
+        if (fullFrames) {
+          fs.writeFileSync(path.join(outDir, `frame-${String(idx + 1).padStart(pad, '0')}-${String(target).padStart(4, '0')}ms.png`), buf);
+        }
+        frames.push({ ms, dataUrl: `data:image/${fullFrames ? 'png' : 'jpeg'};base64,${buf.toString('base64')}` });
       }
       rows.push({ beatNum: idx + 1, id: beats[idx].id, transition: idx === 0 ? '' : transition, frames });
     }
@@ -124,7 +131,7 @@ async function main() {
       await page.setContent(buildSheet([row], meta), { waitUntil: 'load' });
       await page.screenshot({ path: one, type: 'png', fullPage: true });
     }
-    console.log(`FILMSTRIP PASS (${rows.length} beat(s) x ${times.length} frames, ${slow}x slow) -> ${sheetPath}`);
+    console.log(`FILMSTRIP PASS (${rows.length} beat(s) x ${times.length} frames, ${slow}x slow) -> ${sheetPath}${fullFrames ? ` (+ full-size frame-NN-MMMMms.png)` : ''}`);
   } finally {
     await browser.close().catch(() => {});
   }

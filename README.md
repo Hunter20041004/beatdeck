@@ -11,9 +11,20 @@ An open-source Agent Skill and headless Chromium toolkit for crafting film-like,
 | :--- | :--- | :--- | :--- |
 | **Visual Model** | Disconnected card rectangles & bullet templates | React timeline components & build steps | One continuous `1920×1080` visual world with card-free compositions |
 | **Authoring Unit** | Static pages | Frame-accurate JSX animations | Narrative **beats** (`BEATS` array) with `at()` intra-beat choreography |
-| **Direction & Craft** | Fixed themes & canned transitions | Manual component wiring | **2–3 bespoke world proposals** + **Hero Asset Craft Pass** + 3 Motion Tiers |
+| **Direction & Craft** | Fixed themes & canned transitions | Manual component wiring | **2–3 bespoke world proposals** + **Hero Asset Craft Pass** + a motion register with 2–3 signature moments |
 | **Single Source of Truth** | Separate speaker doc & slides drift quickly | Video-only output; no live talk mode | One HTML drives Live Talk, Notes, Script, PDF, Share HTML & MP4 |
 | **Dependencies** | Office / browser SaaS | Node + bundler + React ecosystem | Plain HTML/CSS/JS + Playwright Chromium (`ffmpeg` optional for MP4) |
+
+### What's New in v1.7: Fixes From a Cold Test
+
+A new deck built from scratch with only these docs (a course-planner pitch with real captures) turned up ten rough edges. v1.7 fixes them:
+
+- **`fonts.mjs` embeds the deck's fonts.** It subsets each face to the characters the deck uses and links `fonts/fonts.css`, so lint, snapshots, the share HTML and a phone all render the same typeface. Lint adds a `font-fallback` note (never fatal) when text renders in a font the deck does not ship.
+- **One signature budget everywhere:** two or three moments where the content itself moves. The leftover "Motion Intensity Tier" wording is gone.
+- **`carry(..., { size: true })`** eases width and height so text reflows; `scale` still exists for shrinking into a summary, and the docs say when each fits.
+- **Lint:** an unfilled `[missing: …]` on stage is a `placeholder` warning (fails `--strict`); `text-density` skips `aria-hidden` decoration; `small-capture` reads `data-capture-dpr` for an exact check on 2x captures.
+- **Docs:** Route A allows a faithful DOM rebuild of the one product component a signature moment moves; the direction step says what to do when the user is away.
+- **`filmstrip.mjs --frames`** saves full-size PNGs of single moments; the HUD hides on touch screens.
 
 ### What's New in v1.6: Motion That Fits the Content
 
@@ -144,6 +155,9 @@ Invoke tools from any workspace using `<skill-dir>` (the directory containing `S
 # 0. Scaffold a style-free deck with the full runtime contract wired
 node <skill-dir>/scripts/new-deck.mjs <path/to/deck.html> [--title "Deck Title"] [--lang en] [--beats 6 | --ids a,b,c] [--force]
 
+# 0b. Embed subset web fonts (re-run after editing copy)
+node <skill-dir>/scripts/fonts.mjs <path/to/deck.html> --font "Family:weight=/path/font.ttf" [--font …] [--out dir]
+
 # 1. Verify runtime contract, console errors, broken images, overflow, line wraps + craft warnings
 node <skill-dir>/scripts/lint.mjs <path/to/deck.html> [--strict] [--json] [--motion=false]
 
@@ -152,7 +166,7 @@ node <skill-dir>/scripts/snapshot.mjs <path/to/deck.html> [--beats 1,3-5] [--col
 node <skill-dir>/scripts/snapshot.mjs <path/to/hero.html> --raw [--out dir]
 
 # 1c. Motion filmstrip: frames over time for each beat
-node <skill-dir>/scripts/filmstrip.mjs <path/to/deck.html> [--beats 2-4] [--times 0,120,280,500,900,1500,2600] [--slow 4] [--out dir]
+node <skill-dir>/scripts/filmstrip.mjs <path/to/deck.html> [--beats 2-4] [--times 0,120,280,500,900,1500,2600] [--slow 4] [--frames] [--out dir]
 
 # 1d. Upgrade an older deck to the current runtime (keeps its design)
 node <skill-dir>/scripts/upgrade-runtime.mjs <path/to/deck.html> [--out new.html]

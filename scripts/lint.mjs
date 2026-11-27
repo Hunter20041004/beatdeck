@@ -317,10 +317,22 @@ async function inspectActiveBeat(page) {
       if (allows(img, 'small-capture')) continue;
       const shownW = img.getBoundingClientRect().width / scale;
       const ratio = shownW / img.naturalWidth;
-      if (ratio < 0.4) {
+      // data-capture-dpr: the deviceScaleFactor the capture was taken at. A 2x capture holds UI text at twice
+      // its CSS size, so what matters is the CSS-pixel scale: below ~1.1 a 16px UI label lands under 18px.
+      const dpr = parseFloat(img.getAttribute('data-capture-dpr') || '') || 0;
+      const name = img.getAttribute('src')?.split('/').pop() || describeEl(img);
+      if (dpr > 0) {
+        const cssScale = ratio * dpr;
+        if (cssScale < 1.1) {
+          warnings.push({
+            type: 'small-capture',
+            message: `Screenshot ${name} (captured at ${dpr}x) shows its UI at ${Math.round(cssScale * 100)}% of CSS size, so 16px labels land at ~${Math.round(16 * cssScale)}px on stage; crop tighter or enlarge`,
+          });
+        }
+      } else if (ratio < 0.4) {
         warnings.push({
           type: 'small-capture',
-          message: `Screenshot ${img.getAttribute('src')?.split('/').pop() || describeEl(img)} is shown at ${Math.round(ratio * 100)}% of its pixel size (${Math.round(shownW)}px wide); text inside is likely unreadable. Crop tighter or enlarge`,
+          message: `Screenshot ${name} is shown at ${Math.round(ratio * 100)}% of its pixel size (${Math.round(shownW)}px wide); text inside is likely unreadable. Crop tighter or enlarge (add data-capture-dpr="2" to a 2x capture for an exact check)`,
         });
       }
     }
@@ -400,7 +412,7 @@ async function inspectActiveBeat(page) {
       const allowList = host ? host.getAttribute('data-lint-allow').split(/[\s,]+/).filter(Boolean) : [];
       segments.push({ text: v, allow: allowList });
       const logicalFont = (parseFloat(getComputedStyle(p).fontSize) || 0);
-      if (!allowList.includes('text-density') && !p.closest('svg') && logicalFont >= 14) {
+      if (!allowList.includes('text-density') && !p.closest('svg') && !p.closest('[aria-hidden="true"]') && logicalFont >= 14) {
         cjkCount += (v.match(/[㐀-鿿぀-ヿ]/g) || []).length;
         latinWords += (v.replace(/[㐀-鿿぀-ヿ]/g, ' ').match(/[A-Za-z0-9]+(?:['’.-][A-Za-z0-9]+)*/g) || []).length;
       }
@@ -439,7 +451,56 @@ async function inspectActiveBeat(page) {
       .sort()
       .join('|');
 
-    return { issues, warnings, fingerprint, boxedCount: boxed.length, segments, headline };
+    // Font fallback: which characters no named family in their stack provides (they render in a system
+    // font the author never chose), and which named families are only installed locally (viewers on another
+    // machine or a phone get something else). Machine-dependent, so it is reported as a note, not a warning.
+    const fonts = { missing: [], local: [] };
+    try {
+      const GENERIC = /^(serif|sans-serif|monospace|cursive|fantasy|system-ui|ui-[a-z-]+|emoji|math|fangsong|-apple-system|blinkmacsystemfont)$/i;
+      const web = new Set(Array.from(document.fonts).filter((f) => f.status === 'loaded').map((f) => f.family.replace(/^['"]|['"]$/g, '').toLowerCase()));
+      const cv = document.createElement('canvas');
+      cv.width = 56; cv.height = 56;
+      const cx = cv.getContext('2d', { willReadFrequently: true });
+      const sigCache = new Map();
+      const sig = (ch, font) => {
+        const key = `${font}|${ch}`;
+        if (sigCache.has(key)) return sigCache.get(key);
+        cx.clearRect(0, 0, 56, 56);
+        cx.font = `36px ${font}`;
+        cx.fillStyle = '#000';
+        cx.textBaseline = 'top';
+        cx.fillText(ch, 6, 6);
+        const d = cx.getImageData(0, 0, 56, 56).data;
+        let h = 0;
+        for (let i = 3; i < d.length; i += 4) h = (h * 31 + d[i]) | 0;
+        sigCache.set(key, h);
+        return h;
+      };
+      const has = (fam, ch) => sig(ch, `"${fam}", monospace`) !== sig(ch, 'monospace') || sig(ch, `"${fam}", serif`) !== sig(ch, 'serif');
+      const missing = new Set();
+      const local = new Set();
+      const checked = new Set();
+      const fw = document.createTreeWalker(stage, NodeFilter.SHOW_TEXT);
+      let fn;
+      while ((fn = fw.nextNode())) {
+        const el = fn.parentElement;
+        if (!el || !isVisibleInStage(el) || el.closest('#subtitle') || allows(el, 'font-fallback')) continue;
+        const fams = getComputedStyle(el).fontFamily.split(',').map((f) => f.trim().replace(/^['"]|['"]$/g, '')).filter((f) => f && !GENERIC.test(f));
+        const stack = fams.join('|');
+        for (const ch of new Set(Array.from(fn.nodeValue || '').filter((c) => c.trim() && c.codePointAt(0) > 32))) {
+          const key = `${stack}|${ch}`;
+          if (checked.has(key) || checked.size > 1500) continue;
+          checked.add(key);
+          const hit = fams.find((f) => has(f, ch));
+          if (!hit) { if (fams.length) missing.add(ch); continue; }
+          if (!web.has(hit.toLowerCase())) local.add(hit);
+        }
+      }
+      fonts.missing = Array.from(missing);
+      fonts.local = Array.from(local);
+    } catch (_) { /* canvas unavailable: skip */ }
+
+    return { issues, warnings, fingerprint, boxedCount: boxed.length, segments, headline, fonts };
   });
 }
 
@@ -769,6 +830,9 @@ async function main() {
 
       const failures = [];
       const warnings = [];
+      const notes = [];
+      const fontMissing = new Set();
+      const fontLocal = new Set();
       let prevFingerprint = null;
       const total = apiInfo.beats.length;
       const lang = apiInfo.lang;
@@ -812,6 +876,8 @@ async function main() {
         for (const w of inspected.warnings) {
           warnings.push({ beat: currentBeatLabel, ...w });
         }
+        for (const ch of inspected.fonts?.missing || []) fontMissing.add(ch);
+        for (const f of inspected.fonts?.local || []) fontLocal.add(f);
         if (
           prevFingerprint &&
           inspected.boxedCount >= 2 &&
@@ -918,7 +984,23 @@ async function main() {
         warnings.push(...(await checkMotion(page.context().browser(), input, total, apiInfo.lintAllow)));
       }
 
-      return { total, failures, warnings };
+      if (fontMissing.size) {
+        const sample = Array.from(fontMissing).slice(0, 16).join('');
+        notes.push({
+          beat: 'deck',
+          type: 'font-fallback',
+          message: `${fontMissing.size} character(s) that no named font in their stack provides on this machine (e.g. ${sample}); they render in a system fallback you did not choose. Embed the faces with fonts.mjs`,
+        });
+      }
+      if (fontLocal.size) {
+        notes.push({
+          beat: 'deck',
+          type: 'font-fallback',
+          message: `Renders with locally installed font(s) that are not embedded: ${Array.from(fontLocal).join(', ')}. Viewers on another machine or a phone will see a different face; embed them with fonts.mjs`,
+        });
+      }
+
+      return { total, failures, warnings, notes };
     }
   );
 
@@ -937,6 +1019,7 @@ async function main() {
           strict,
           errors: result.failures,
           warnings: result.warnings,
+          notes: result.notes || [],
         },
         null,
         2
@@ -947,6 +1030,9 @@ async function main() {
 
   for (const w of result.warnings) {
     console.warn(`  WARN [${w.beat}] (${w.type}) ${w.message}`);
+  }
+  for (const n of result.notes || []) {
+    console.warn(`  NOTE [${n.beat}] (${n.type}) ${n.message}`);
   }
 
   if (result.failures.length > 0) {

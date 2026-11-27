@@ -36,6 +36,19 @@ Lint keeps warning (`skeleton`) until every placeholder scene is replaced, so a 
 
 ---
 
+## 0b. Embedded Fonts (`scripts/fonts.mjs`)
+
+```bash
+node <skill-dir>/scripts/fonts.mjs <deck.html> --font "Noto Sans TC:400 900=/path/NotoSansTC[wght].ttf" \
+     [--font "Outfit:600=/path/Outfit-SemiBold.ttf"] [--out <deck-dir>/fonts] [--extra "chars"] [--link=false]
+```
+
+A deck that names fonts it does not ship renders in whatever the machine has: the headless Chromium behind lint and snapshots, the presenter's laptop and a viewer's phone can each pick a different face, with different widths and line breaks. `fonts.mjs` collects every character the deck can show (stage markup and the `BEATS` strings, plus printable ASCII and common CJK punctuation), subsets each `--font` source to them with HarfBuzz, writes `<Family>-<weight>.woff2` and a `fonts.css` of `@font-face` rules, and links `fonts.css` from the deck's `<head>` unless `--link=false`. A CJK face usually lands at 60–150 KB. `--font` takes `Family:weight=path`, where weight is one value (`400`) or a variable range (`400 900`); sources are `.ttf`, `.otf`, `.woff` or `.woff2` (extract one face from a `.ttc` first). Re-run it after editing copy; `bundle-share.mjs` inlines the result.
+
+Lint reports what is left as a `font-fallback` **note**: characters no named family provides on this machine, and named families that render only because they are installed locally. Notes print as `NOTE` and appear under `notes` in `--json`; they never fail lint, because the answer depends on the machine, so read them on the machine you will present from.
+
+---
+
 ## 1. Layout, Contract & Craft Linter (`scripts/lint.mjs`)
 
 ```bash
@@ -61,13 +74,13 @@ Craft **warnings** (printed as `WARN`, fatal only with `--strict`):
 | `layout-repeat` | Two consecutive beats share the same boxed-layout fingerprint (≥ 2 boxes, 60px grid). |
 | `skeleton` | A `[data-beatdeck-skeleton]` placeholder from `new-deck.mjs` is still visible. |
 | `ai-gradient` / `gradient-text` | A CSS gradient with ≥ 2 saturated stops in the blue–violet–pink range (hue spread ≥ 25°), or gradient-filled text. |
-| `small-capture` | A raster `<img>` ≥ 600px wide shown below 40% of its pixel size; a DPR-2 capture at that scale puts UI text under ~11px on stage. Crop tighter or enlarge. |
+| `small-capture` | A raster `<img>` ≥ 600px wide shown below 40% of its pixel size. With `data-capture-dpr="N"` (the capture's deviceScaleFactor) it checks the UI's CSS scale exactly instead: below 110%, a 16px label lands under ~18px on stage. Crop tighter or enlarge. |
 | `glassmorphism` | ≥ 2 `backdrop-filter: blur()` panels on one beat. |
-| `text-density` | > 80 word-equivalents on stage (Latin words + CJK chars ÷ 2; ignores SVG art and text under 14px). |
+| `text-density` | > 80 word-equivalents on stage (Latin words + CJK chars ÷ 2; ignores SVG art, `aria-hidden="true"` decoration such as a deck-wide axis or spine, and text under 14px). |
 | `bullet-stack` | ≥ 6 visible `<li>` on one beat. |
 | `label-headline` | The largest text on the beat is a topic label (Agenda, Overview, Thank you, Q&A, 議程, 謝謝聆聽…). |
 | `ai-phrase` | Stock LLM phrasing in stage text or `say` (English and Chinese lists in `scripts/lib/copy-rules.mjs`). |
-| `placeholder` | TODO, TBD, XX%, `[Company]`, lorem ipsum, John Doe, Acme, 某某, 〇〇. |
+| `placeholder` | TODO, TBD, XX%, `[Company]`, lorem ipsum, John Doe, Acme, 某某, 〇〇, and an unfilled `[missing: …]` mark (keep open questions in `note` instead, which is exempt). |
 | `internal-process` | Process bookkeeping: iteration/revision counts, review rounds, resubmission notes, sub-agents, bug-fix tallies, commit hashes, source file paths (「調整了 N 次」「第二版修正」「補交」「修了 N 處」). `note` is not checked. |
 | `read-aloud` | ≥ 70% of a beat's `say` 4-grams are printed on stage. |
 | `metaphor-frame` | 「X 是一場／一種 Y」「就像一場…」 / "X is a gamble/journey/dance" in stage text or `say`. |

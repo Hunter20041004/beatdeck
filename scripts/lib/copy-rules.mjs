@@ -123,6 +123,7 @@ export const PLACEHOLDERS = [
   [/\b(John|Jane) Doe\b/, 'John Doe'],
   [/\bAcme\b/, 'Acme'],
   [/某某|〇〇|○○|XXX/, '某某／〇〇／XXX'],
+  [/\[\s*missing\s*[:：]/i, '[missing: …] (a fact still to fill in)'],
 ];
 
 /** Topic labels used as headlines instead of a claim (agenda / thank-you slides). */
