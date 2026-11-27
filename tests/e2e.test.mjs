@@ -919,7 +919,9 @@ async function runTests() {
       const hint = await pp.evaluate(() => { const el = document.getElementById('rotate-hint'); return { shown: getComputedStyle(el).display !== 'none', text: el.textContent }; });
       assert.ok(hint.shown && /橫向/.test(hint.text), `portrait phone must show the rotate hint (${JSON.stringify(hint)})`);
       await pp.setViewportSize({ width: 844, height: 390 });
-      assert.equal(await pp.evaluate(() => getComputedStyle(document.getElementById('rotate-hint')).display), 'none', 'landscape must hide the hint');
+      // the runtime listens for the orientation change, which arrives on the next frame
+      await pp.waitForFunction(() => getComputedStyle(document.getElementById('rotate-hint')).display === 'none', null, { timeout: 3000 })
+        .catch(() => assert.fail('landscape must hide the hint'));
     } finally {
       await bridgeBrowser.close();
     }
