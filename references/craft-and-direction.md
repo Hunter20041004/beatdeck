@@ -28,7 +28,7 @@ Each proposal must inhabit a different physical or conceptual world—never thre
 
 Motion is where decks most often look cheap. The cause is almost never too little motion; it is effects used as decoration: a stamp on every claim, letters bouncing in, a different flashy transition at every click, things flying across the stage. Audiences read that as a template showing off, and it pulls their eyes away from the speaker. Premium motion is mostly invisible: soft, consistent, precisely timed, and it spends its one loud gesture on the moment the story turns.
 
-Decide motion in three steps, in this order: **register** (from what the talk is for), **beat intent** (from what each beat does), **signature** (one or two moments only). Then apply the craft defaults in §2.4.
+Decide motion in three steps, in this order: **register** (from what the talk is for), **beat intent** (from what each beat does), **signature** (two or three moments where the content itself moves, §2.5). Then apply the craft defaults in §2.4.
 
 ### 2.1 Register: what is this presentation for?
 
@@ -64,13 +64,13 @@ Choose each beat's motion from its job, not from the helper list. The quiet colu
 ### 2.3 Budget and rhythm
 
 - **Most beats are quiet.** About three quarters of the beats use only `rise`, `unveil`, `focus`, `draw`, `countUp` or `morph`, and change with `fade`, `dip`, `cut`, `match` or `camera`.
-- **One or two signature moments per deck** (about one per six beats). Lint: `motion-accent-overuse` counts beats that use stamp, shake, iris, cursor, typewriter or split type.
+- **Accents are rare** (about one beat in six): stamp, shake, iris, cursor, typewriter, split type. Lint: `motion-accent-overuse`. This is a different thing from the two or three signature moments in §2.5, which make the content itself move.
 - **One gesture per beat.** If a beat needs three effects to be interesting, the composition is the problem. Lint: `motion-busy`.
 - **At most two showy beat-change types per deck**, each tied to a story turn. Lint: `transition-variety`.
 - **Bounce is a register choice, not a default.** The default spring is critically damped and `ease.out` does not overshoot. Lint: `motion-bounce`.
 - **Small travel.** Entrances move 8–40 px; large travel belongs to the camera. Lint: `motion-travel`.
 - **Still is a move.** After the signature moment, hold. A beat where nothing moves for two seconds after one reveal reads as confidence.
-- **Not nothing at all.** A long deck with no signature moment feels flat. Lint: `motion-no-signature`.
+- **Not nothing at all.** Quiet is the baseline, not the goal. A deck with no signature moment looks like a slide tool made it (§2.5). Lint: `motion-no-signature`.
 
 ### 2.4 Craft defaults (what "premium" means in numbers)
 
@@ -88,7 +88,24 @@ Choose each beat's motion from its job, not from the helper list. The quiet colu
 
 Write the chosen register, transition and easings into the deck's `MOTION` block. The skeleton's defaults already follow this table.
 
-### 2.5 Watch it, don't imagine it
+### 2.5 Signature moments: make the content move
+
+Restraint keeps a deck from looking cheap; it does not make it memorable. A deck where every beat only fades and rises looks like any slide tool made it. The signature moments are where the deck earns its place, and the test is strict: **if a slide tool's animation pane could produce it, it is not a signature.** A signature moment makes the subject itself move, the way only code can, so the motion *is* the explanation.
+
+Patterns that pass the test:
+
+| Pattern | What moves | Example |
+| :--- | :--- | :--- |
+| **Living object** | One object (a schedule, a table, a map, a UI) persists across several beats; the beat change is an invisible `cut` and only what the story changes moves, with `carry()`. | A production board re-plans itself: the stopped job slides to another machine, the rush order drops in and pushes the next job later. |
+| **The rule, performed** | A decision procedure runs on screen: rows re-sort as each criterion applies, an option is struck out and sinks to an "excluded" tray, a tie is bracketed, a threshold rolls and the order changes. | A policy table that picks P-C, then re-picks P-B when the threshold rolls from 5 to 0. |
+| **Time as a driver** | A clock, a now-line, a countdown, a calendar runs, and the scene changes because time passed. | The clock runs to 10:08 and from that line on, the machine is hatched out. |
+| **The subject's own physics** | The material of the topic sets the verb: a flashlight searches the dark, sound ripples before sight, an almanac tears off its pages, ink bleeds into a new verdict. | A horror game deck where every reveal is found by a torch, as in the game. |
+| **History collapses into a summary** | Elements from earlier beats fly back from where they appeared and shrink into a recap, record or timeline (`carry(beatId, { scale: true })`). | A decision log whose nodes are the stop mark, the 40 minutes and the pick, flown in from their beats. |
+| **State change in place** | Two states of the same image or diagram; only the difference transforms (a masked ghost of the old state dissolves, a path `morph`s, a number rolls). | Night 2 starts as an exact copy of night 1, then only the almanac card changes. |
+
+Rules for them: give each deck **two or three** such moments, each tied to the beat where the idea lives; build them from the deck's own objects, never from stock effects; keep their craft premium (soft curves, real timing, one thing moving at a time); and make sure `?still` lands on the explained end state.
+
+### 2.6 Watch it, don't imagine it
 
 `snapshot.mjs` only sees the final frame. Run `filmstrip.mjs` and read each row: does the motion help the audience read the beat in the right order? Would the beat be worse with no motion at all? If not, remove it. Does the signature moment land, and is it the only one that shouts?
 
@@ -195,6 +212,7 @@ All helpers arrive in `CHOREO[id](scene, helpers)`. Every one is `?still`-safe (
 | `rise(els, { y, ms, each, delay, blur })` | **Quiet default.** Short lift with a fade on a long deceleration, staggered. | Most content on most beats. |
 | `unveil(el, { from, ms, delay })` | **Quiet.** Text rises out of its own baseline mask. | Headlines, key statements (one per beat). |
 | `focus(keep, { dim, within })` | **Quiet emphasis.** Everything marked `data-focus` (or `within`) recedes except `keep`. | Pointing at one item without effects. |
+| `carry(fromBeat, { select, ms, delay, each, scale })` | **Living objects.** Elements sharing `data-match` with another beat (default: the previous one) start where they were there and travel here. Pair with `transition: "cut"`. | Schedules re-planning, rows re-sorting, earlier details flying into a summary (§2.5). |
 | `stagger(els, (el, delay, i) => …, { each, from, delay, seed })` | Offsets a group; `from`: `start`, `end`, `center`, `edges`, `random` (seeded), or an index. | Crowds, grids, letters. |
 | `splitText(el, { by: "char" \| "word" })` | **Accent.** Wraps text in inline-block spans (keeps `<br>`), returns them. Use `char` for CJK. | Kinetic type with `stagger`. |
 | `wipe(el, { from })` / `iris(el, { x, y })` | Hard-edged clip reveal / circular aperture (**accent**). | Replacing statements, revealing photos. |

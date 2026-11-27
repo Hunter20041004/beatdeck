@@ -383,6 +383,37 @@
     return keepEls;
   }
 
+  // carry(fromBeat, { select, ms: 1100, delay, each, ease: "inOut", scale: false }) — persistent objects:
+  // every element here whose data-match also exists in beat `fromBeat` (an id, or omit for the previous
+  // beat) starts where it was there and travels to its place here. Pair it with transition "cut" so the
+  // change is invisible and only the objects that changed move: a schedule re-planning itself, rows
+  // re-sorting, an earlier detail flying into a summary. `scale: true` also eases its size.
+  function carry(fromBeat, opts = {}) {
+    const host = currentScene;
+    if (!host) return [];
+    const here = scenes.indexOf(host);
+    const idx = typeof fromBeat === "string" ? BEATS.findIndex((b) => b.id === fromBeat) : here - 1;
+    const src = scenes[idx];
+    if (!src || src === host) return [];
+    note("carry");
+    const k = stageScale();
+    const out = [];
+    const els = Array.from(host.querySelectorAll(opts.select || "[data-match]")).filter((el) => el.dataset.match);
+    els.forEach((el, i) => {
+      const from = src.querySelector(`[data-match="${CSS.escape(el.dataset.match)}"]`);
+      if (!from) return;
+      const a = from.getBoundingClientRect();
+      const b = el.getBoundingClientRect();
+      const dx = (a.left - b.left) / k, dy = (a.top - b.top) / k;
+      const sx = opts.scale && b.width ? a.width / b.width : 1, sy = opts.scale && b.height ? a.height / b.height : 1;
+      if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5 && Math.abs(sx - 1) < 0.01 && Math.abs(sy - 1) < 0.01) return;
+      const kf = { translate: [`${dx}px ${dy}px`, "0 0"] };
+      if (opts.scale) { kf.scale = [`${sx} ${sy}`, "1 1"]; kf.transformOrigin = ["0 0", "0 0"]; }
+      out.push(...tween(el, kf, { ms: opts.ms || 1100, delay: (opts.delay || 0) + i * (opts.each || 0), ease: opts.ease || "inOut", kind: "carry" }));
+    });
+    return out;
+  }
+
   // wipe(target, { from: "left"|"right"|"top"|"bottom"|"center", ms, delay, ease }) — hard-edged clip reveal.
   const WIPE_FROM = { left: "inset(0 100% 0 0)", right: "inset(0 0 0 100%)", top: "inset(0 0 100% 0)", bottom: "inset(100% 0 0 0)", center: "inset(0 50% 0 50%)", middle: "inset(50% 0 50% 0)" };
   function wipe(target, opts = {}) {
@@ -557,7 +588,7 @@
   }
 
   const helpers = {
-    at, animate, tween, spring, stagger, splitText, rise, unveil, focus, wipe, iris, stamp, shake, strike,
+    at, animate, tween, spring, stagger, splitText, rise, unveil, focus, carry, wipe, iris, stamp, shake, strike,
     draw, followPath, morph, cursor, ambient, countUp, typewriter, isStill, isVideo,
   };
 
