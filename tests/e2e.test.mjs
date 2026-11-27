@@ -765,10 +765,10 @@ async function runTests() {
     for (const t of ['motion-accent-overuse', 'motion-busy', 'motion-bounce', 'motion-travel', 'transition-variety']) {
       assert.ok(loudTypes.has(t), `lint must flag ${t} on a deck that uses effects everywhere (got ${[...loudTypes].join(', ')})`);
     }
-    // ...while a quiet deck passes the excess checks and is only asked for one signature moment.
+    // ...while a quiet deck passes the excess checks and is only asked for a signature moment and a bridge.
     const quietPath = makeFixture('quiet-motion', '(scene, { rise, unveil }) => { unveil(scene.querySelector("h1")); rise(scene.querySelectorAll("p"), { delay: 200 }); }');
     const quietTypes = JSON.parse(runNode('scripts/lint.mjs', [quietPath, '--json']).stdout).warnings.map((w) => w.type).filter((t) => /^motion-|^transition-/.test(t));
-    assert.deepEqual(quietTypes, ['motion-no-signature'], `a quiet deck must only be asked for a signature moment (got ${quietTypes.join(', ')})`);
+    assert.deepEqual(quietTypes.sort(), ['motion-no-signature', 'transition-monotone'], `a quiet all-fade deck must only be asked for a signature moment and a bridge (got ${quietTypes.join(', ')})`);
     // carry(): an element shared with the previous beat starts where it was there.
     const carryPath = path.join(tmpDir, 'carry', 'deck.html');
     assert.equal(runNode('scripts/new-deck.mjs', [carryPath, '--ids', 'a,b']).status, 0);
@@ -866,6 +866,64 @@ async function runTests() {
     const framePng = fs.readdirSync(framesDir).filter((f) => /^frame-02-0300ms\.png$/.test(f));
     assert.equal(framePng.length, 1, `filmstrip --frames must write frame-02-0300ms.png (got ${fs.readdirSync(framesDir)})`);
     console.log('   v1.7 checks passed.');
+
+    // 15) v1.8: bridges, transition-monotone, rotate hint
+    console.log('15) Checking v1.8 bridges, transition-monotone and the rotate hint...');
+    const fadePath = path.join(tmpDir, 'bridge', 'deck.html');
+    assert.equal(runNode('scripts/new-deck.mjs', [fadePath, '--ids', 'a,b,c,d,e,f', '--lang', 'zh-Hant']).status, 0);
+    const fades = JSON.parse(runNode('scripts/lint.mjs', [fadePath, '--json']).stdout);
+    assert.ok(fades.warnings.some((w) => w.type === 'transition-monotone'), 'an all-dip deck must get transition-monotone');
+    let bridgeSrc = fs.readFileSync(fadePath, 'utf8');
+    bridgeSrc = bridgeSrc
+      .replace('    bridges: {},', `    bridges: {
+      spine: ({ from, to, layer, run, reverse }) => {
+        const bar = document.createElement("div");
+        bar.className = "probe-bar";
+        bar.style.cssText = "position:absolute;top:0;bottom:0;width:14px;background:#c33";
+        layer.append(bar);
+        run(bar, { left: reverse ? ["1920px", "-14px"] : ["-14px", "1920px"] });
+        run(from, { opacity: [1, 0.2] });
+        return run(to, { clipPath: [reverse ? "inset(0 0 0 100%)" : "inset(0 100% 0 0)", "inset(0 0 0 0)"] });
+      },
+    },`)
+      .replace('{ id: "c",', '{ id: "c", transition: { type: "spine", ms: 3000 },')
+      .replace('{ id: "e",', '{ id: "e", transition: "spine",');
+    fs.writeFileSync(fadePath, bridgeSrc, 'utf8');
+    const bridged = JSON.parse(runNode('scripts/lint.mjs', [fadePath, '--json']).stdout);
+    assert.ok(!bridged.warnings.some((w) => w.type === 'transition-monotone'), 'a bridge must clear transition-monotone');
+    assert.ok(!bridged.warnings.some((w) => w.type === 'transition-variety'), 'bridges must not count as showy stock changes');
+    assert.ok(!bridged.errors.some((f) => /runtime|console|page/i.test(`${f.type} ${f.message}`)), `bridge must not throw: ${JSON.stringify(bridged.errors)}`);
+    const bridgeBrowser = await launchBrowser();
+    try {
+      const page = await (await bridgeBrowser.newContext({ viewport: { width: 1920, height: 1080 } })).newPage();
+      const errors = [];
+      page.on('pageerror', (e) => errors.push(String(e)));
+      await page.goto(pathToFileURL(fadePath).href);
+      await page.waitForFunction(() => document.body.dataset.ready === '1');
+      assert.deepEqual(await page.evaluate(() => window.__beatdeck.bridges), ['spine']);
+      await page.evaluate(() => { window.__beatdeck.goTo(1); window.__beatdeck.goTo(2); });
+      const mid = await page.evaluate(() => ({ t: document.body.dataset.beatTransition, layer: Boolean(document.querySelector('#stage > .bd-bridge .probe-bar')) }));
+      assert.equal(mid.t, 'spine');
+      assert.ok(mid.layer, 'the bridge must draw in a layer above the scenes');
+      await page.evaluate(() => window.__beatdeck.goTo(1)); // clicking on mid-change cancels and cleans up, then plays reversed
+      await page.waitForFunction(() => !document.querySelector('.bd-bridge'), null, { timeout: 5000 });
+      assert.deepEqual(errors, [], 'bridge must run without page errors');
+      await page.goto(pathToFileURL(fadePath).href + '?still&p=3');
+      await page.waitForFunction(() => document.body.dataset.ready === '1');
+      assert.equal(await page.evaluate(() => document.querySelectorAll('.bd-bridge').length), 0, '?still must never play a bridge');
+
+      const phone = await bridgeBrowser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+      const pp = await phone.newPage();
+      await pp.goto(pathToFileURL(fadePath).href);
+      await pp.waitForFunction(() => document.body.dataset.ready === '1');
+      const hint = await pp.evaluate(() => { const el = document.getElementById('rotate-hint'); return { shown: getComputedStyle(el).display !== 'none', text: el.textContent }; });
+      assert.ok(hint.shown && /橫向/.test(hint.text), `portrait phone must show the rotate hint (${JSON.stringify(hint)})`);
+      await pp.setViewportSize({ width: 844, height: 390 });
+      assert.equal(await pp.evaluate(() => getComputedStyle(document.getElementById('rotate-hint')).display), 'none', 'landscape must hide the hint');
+    } finally {
+      await bridgeBrowser.close();
+    }
+    console.log('   v1.8 checks passed.');
 
     console.log('ALL E2E TESTS PASSED');
   } finally {

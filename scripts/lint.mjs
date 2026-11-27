@@ -697,6 +697,8 @@ async function checkMotion(browser, input, total, allow) {
       );
       await page.waitForTimeout(340);
     }
+    // Bridges are the deck's own designed changes (MOTION.bridges); they are not stock showy effects.
+    const bridges = new Set(await page.evaluate(() => (window.__beatdeck && window.__beatdeck.bridges) || []));
     const { log, helpers } = await page.evaluate(() => ({ log: window.__bdMotionLog || [], helpers: window.__bdHelperLog || [] }));
     const anims = Array.from({ length: total }, () => []);
     for (const r of log) if (r.beat >= 0 && r.beat < total && !r.loop) anims[r.beat].push(r);
@@ -751,13 +753,24 @@ async function checkMotion(browser, input, total, allow) {
     }
 
     const changes = transitions.slice(1).filter((t) => typeof t === 'string' && t !== '');
-    const loudChanges = changes.filter((t) => !QUIET_CHANGES.has(family(t)));
+    const loudChanges = changes.filter((t) => !QUIET_CHANGES.has(family(t)) && !bridges.has(t));
     const loudFamilies = [...new Set(loudChanges.map(family))];
     if (!skip('transition-variety') && changes.length >= 3 && (loudFamilies.length > 2 || loudChanges.length > Math.max(2, Math.ceil(changes.length / 4)))) {
       warnings.push({
         beat: 'deck',
         type: 'transition-variety',
         message: `${loudChanges.length} of ${changes.length} beat changes are showy (${loudFamilies.join(', ')}); keep most changes to fade, cut, match or camera, and give at most two story turns a distinct change`,
+      });
+    }
+
+    // A deck whose every visible change is a fade reads like a slide tool's default. A deck that already
+    // spends a bridge, a match, a camera move or a showy change at a turn is fine.
+    const visible = changes.filter((t) => t !== 'cut');
+    if (!skip('transition-monotone') && visible.length >= 4 && visible.every((t) => t === 'fade' || t === 'dip')) {
+      warnings.push({
+        beat: 'deck',
+        type: 'transition-monotone',
+        message: `all ${visible.length} visible beat changes are fades; design one bridge from the deck's own visual signature (MOTION.bridges, craft-and-direction §2.7) and use it where each chapter starts, or use match / camera where two beats share an object`,
       });
     }
 

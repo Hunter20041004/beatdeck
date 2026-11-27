@@ -5,8 +5,8 @@ Audiences now pattern-match polish to "an AI made this", and once they do, they 
 Use this file at three moments:
 
 1. **Direction (workflow step 2):** decide the copy voice alongside the visual world. Who is speaking, in what register, and which words this speaker would never say.
-2. **Authoring (step 4):** write against the lists below from the first draft. Rewriting AI tone afterwards is slower than not writing it.
-3. **Verification (steps 5–6):** `lint.mjs --strict` catches the mechanical tells (the **Lint** column). The rest need the human checklist in §6, which is why the contact-sheet review is mandatory.
+2. **Authoring (step 5):** write against the lists below from the first draft. Rewriting AI tone afterwards is slower than not writing it.
+3. **Verification (steps 6–7):** `lint.mjs --strict` catches the mechanical tells (the **Lint** column). The rest need the human checklist in §6, which is why the contact-sheet review is mandatory.
 
 A lint pass is necessary, not sufficient. No rule list can guarantee a deck "doesn't feel AI". A deck can avoid every listed phrase and still say nothing. Treat §6 as the real gate.
 
@@ -167,7 +167,7 @@ Run this on the contact sheet (`snapshot.mjs`), the motion filmstrip (`filmstrip
 3. **Speaker test:** read every `say` aloud. Would *this* speaker say it, in this room? Cut any sentence that sounds like a press release.
 4. **Glance test:** look at the contact sheet for five seconds. Do beats share one visual system *and* differ in composition? Any beat that looks like a template default?
 5. **Claim test:** read only the headlines in order. Do they tell the story as claims, without the body text?
-6. **Motion test:** read `filmstrip.png` row by row. Does each motion help the audience read the beat in the right order, and would the beat be worse without it? Are there two or three moments where the content itself moves, and are they where the story turns?
+6. **Motion test:** read `filmstrip.png` row by row. Does each motion help the audience read the beat in the right order, and would the beat be worse without it? Are there two or three moments where the content itself moves, and are they where the story turns? Does a new chapter arrive through the deck's own bridge, or does every click just fade?
 7. **Need-to-know test:** for every fact on stage, ask whether this audience would understand or act differently without it. Revision history, review rounds, tooling, and submission notes almost never pass.
 
 ---

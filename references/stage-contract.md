@@ -64,6 +64,7 @@ interface BeatdeckAPI {
   current(): number;                // active 0-based beat index
   goTo(index: number): void;        // jump to 0-based beat (clamped; instant in ?still)
   setSubtitle(text: string): void;  // set or clear #subtitle text
+  bridges?: string[];               // names of the deck's own beat changes (MOTION.bridges); lint treats them as designed, not stock
 }
 ```
 
@@ -85,6 +86,7 @@ Enabled when neither `?still`, `?video`, nor `?bare` is active (always ignore ke
 - **`N`**: Toggle the speaker-notes drawer/overlay displaying current beat progress (`i / total`), chapter, `say`, `note`, and estimated duration.
 - **`C`**: Toggle the **`400×300` bottom-right camera safe-zone overlay** in stage coordinates so a presenter recording webcam picture-in-picture can verify no visual content sits under their camera box.
 - **Touch screens** (`hover: none` and `pointer: coarse`): the skeleton hides the HUD, since the tap zones already page and the HUD would only cover the stage.
+- **Phones held upright** (`orientation: portrait` and `pointer: coarse`): the skeleton shows a small hint to turn the phone sideways (in the deck's language). It never shows under `?still`, `?video` or `?bare`.
 
 ---
 
