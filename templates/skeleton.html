@@ -70,10 +70,6 @@
   #hud:hover { opacity: 1; }
   /* Touch screens: tap zones already page (right 75% next, left 25% back), so the HUD would only cover the stage. */
   @media (hover: none) and (pointer: coarse) { #hud { display: none; } }
-  /* A phone held upright shows the 16:9 stage as a thin strip: suggest turning it. */
-  #rotate-hint { display: none; position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 120;
-    padding: 8px 14px; border-radius: 999px; background: rgba(17,17,17,0.82); color: #f3f3f3; font: 14px/1.3 system-ui, sans-serif; pointer-events: none; }
-  @media (orientation: portrait) and (pointer: coarse) { #rotate-hint { display: block; } }
   #hud button { font: inherit; color: inherit; background: none; border: 1px solid #666; padding: 3px 7px; cursor: pointer; }
   #hud button.is-on { background: #ddd; color: #111; }
   #notes-drawer {
@@ -89,8 +85,7 @@
   body.still *, body.still *::before, body.still *::after { transition: none !important; animation: none !important; }
   body.still #hud, body.still #notes-drawer, body.still #camera-safe-zone, body.still #subtitle,
   body.video #hud, body.video #notes-drawer, body.video #camera-safe-zone,
-  body.bare #hud, body.bare #notes-drawer, body.bare #camera-safe-zone, body.bare #subtitle,
-  body.still #rotate-hint, body.video #rotate-hint, body.bare #rotate-hint { display: none !important; }
+  body.bare #hud, body.bare #notes-drawer, body.bare #camera-safe-zone, body.bare #subtitle { display: none !important; }
 
   /* ============ DESIGN: placeholder scene styles (delete) ============ */
   [data-beatdeck-skeleton] .ph-title {
@@ -119,7 +114,6 @@
   <div class="nd-say" id="nd-say"></div>
   <div class="nd-cue" id="nd-cue"></div>
 </aside>
-<div id="rotate-hint" aria-hidden="true"></div>
 <nav id="hud" aria-label="Presentation controls">
   <button type="button" id="btn-prev" aria-label="Previous beat">&larr;</button>
   <span id="hud-counter">01 / 01</span>
@@ -204,7 +198,26 @@
   const $ = (id) => document.getElementById(id);
   const stage = $("stage");
   const world = $("world");
-  $("rotate-hint").textContent = /^zh/i.test(META.lang) ? "轉成橫向，看完整畫面" : /^ja/i.test(META.lang) ? "横向きで全画面表示" : "Turn your phone sideways for the full stage";
+  // Touch screens: hide the HUD (tap zones page) and hint to turn an upright phone sideways. The runtime
+  // owns both, so decks moved onto this runtime with upgrade-runtime.mjs get them without markup or CSS.
+  (() => {
+    const hud = $("hud");
+    if (hud && matchMedia("(hover: none) and (pointer: coarse)").matches) hud.style.display = "none";
+    let hint = $("rotate-hint");
+    if (!hint) {
+      hint = document.createElement("div");
+      hint.id = "rotate-hint";
+      hint.setAttribute("aria-hidden", "true");
+      document.body.appendChild(hint);
+    }
+    hint.textContent = /^zh/i.test(META.lang) ? "轉成橫向，看完整畫面" : /^ja/i.test(META.lang) ? "横向きで全画面表示" : "Turn your phone sideways for the full stage";
+    hint.style.cssText = "position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:120;padding:8px 14px;" +
+      "border-radius:999px;background:rgba(17,17,17,0.82);color:#f3f3f3;font:14px/1.3 system-ui,sans-serif;pointer-events:none;display:none";
+    const upright = matchMedia("(orientation: portrait) and (pointer: coarse)");
+    const sync = () => { hint.style.display = upright.matches && !isStill && !isVideo && !isBare ? "block" : "none"; };
+    upright.addEventListener("change", sync);
+    sync();
+  })();
   const subtitleEl = $("subtitle");
   const camZone = $("camera-safe-zone");
   const notes = $("notes-drawer");
