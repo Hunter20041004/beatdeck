@@ -1,4 +1,4 @@
-import { parseCliArgs, resolveDeckUrl, waitForDeckReady, withPage } from './lib/browser.mjs';
+import { parseCliArgs, resolveDeckUrl, variableClockInitScript, waitForDeckReady, withPage } from './lib/browser.mjs';
 import {
   checkText,
   countContrastFrames,
@@ -10,7 +10,7 @@ import {
 } from './lib/copy-rules.mjs';
 
 function printUsage() {
-  console.error('Usage: node scripts/lint.mjs <deck.html> [--json] [--strict]');
+  console.error('Usage: node scripts/lint.mjs <deck.html> [--json] [--strict] [--motion=false]');
 }
 
 /**
@@ -503,8 +503,190 @@ async function checkStageFit(context, input, total) {
   return issues;
 }
 
+/** Installed before deck scripts: logs every element animation, tagged with the beat being entered. */
+function motionProbeInitScript() {
+  const log = (window.__bdMotionLog = []);
+  const beat = () => (typeof window.__bdMotionBeat === 'number' ? window.__bdMotionBeat : -1);
+  const ignored = (el) =>
+    !el || !el.closest || el.id === 'world' || el.id === 'stage' ||
+    (el.classList && el.classList.contains('scene')) || el.hasAttribute('data-depth') ||
+    Boolean(el.closest('#hud, #notes-drawer, #subtitle, #camera-safe-zone'));
+  const norm = (e) => String(e || 'ease').replace(/\s+/g, '');
+  const META_KEYS = new Set(['offset', 'easing', 'composite']);
+  const origAnimate = Element.prototype.animate;
+  Element.prototype.animate = function patchedAnimate(kf, opts) {
+    const anim = origAnimate.call(this, kf, opts);
+    try {
+      if (!ignored(this)) {
+        const o = typeof opts === 'number' ? { duration: opts } : opts || {};
+        const props = new Set();
+        let frames = 0;
+        if (Array.isArray(kf)) {
+          frames = kf.length;
+          kf.forEach((f) => Object.keys(f).forEach((k) => { if (!META_KEYS.has(k)) props.add(k); }));
+        } else if (kf) {
+          Object.entries(kf).forEach(([k, v]) => {
+            if (META_KEYS.has(k)) return;
+            props.add(k);
+            frames = Math.max(frames, Array.isArray(v) ? v.length : 1);
+          });
+        }
+        log.push({ beat: beat(), props: [...props], easing: norm(o.easing || 'linear'), frames, loop: o.iterations === Infinity });
+      }
+    } catch (_) { /* never break the deck */ }
+    return anim;
+  };
+  document.addEventListener('transitionrun', (e) => {
+    if (ignored(e.target)) return;
+    const cs = getComputedStyle(e.target);
+    const props = cs.transitionProperty.split(',').map((s) => s.trim());
+    const eases = cs.transitionTimingFunction.split(/,(?![^(]*\))/).map((s) => s.trim());
+    const i = Math.max(0, props.indexOf(e.propertyName));
+    log.push({ beat: beat(), props: [e.propertyName], easing: norm(eases[i % eases.length]), frames: 2, loop: false });
+  }, true);
+  document.addEventListener('animationstart', (e) => {
+    if (ignored(e.target)) return;
+    const cs = getComputedStyle(e.target);
+    log.push({ beat: beat(), props: [`@${e.animationName}`], easing: norm(cs.animationTimingFunction), frames: 3, loop: cs.animationIterationCount === 'infinite' });
+  }, true);
+  // rAF-driven helpers (draw, morph, followPath, countUp, typewriter) show up as DOM writes.
+  const seen = new Set();
+  new MutationObserver((muts) => {
+    for (const m of muts) {
+      const el = m.type === 'characterData' ? m.target.parentElement : m.target;
+      if (ignored(el)) continue;
+      let prop = null;
+      if (m.type === 'attributes' && m.attributeName === 'd') prop = 'path-morph';
+      else if (m.type === 'attributes' && m.attributeName === 'transform') prop = 'path-follow';
+      else if (m.type === 'attributes' && m.attributeName === 'style' && el.style && el.style.strokeDashoffset) prop = 'stroke-draw';
+      else if (m.type === 'characterData' || m.type === 'childList') prop = 'text-roll';
+      if (!prop) continue;
+      // A tween writes many frames; a one-off reset (innerHTML, class swap) is not motion.
+      const hitKey = `${beat()}|${prop}`;
+      if (!el.__bdHits || el.__bdHits.key !== hitKey) el.__bdHits = { key: hitKey, n: 0 };
+      el.__bdHits.n += 1;
+      if (el.__bdHits.n < 3) continue;
+      const key = hitKey;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      log.push({ beat: beat(), props: [prop], easing: 'js', frames: 3, loop: false });
+    }
+  }).observe(document, { subtree: true, attributes: true, attributeFilter: ['d', 'transform', 'style'], characterData: true, childList: true });
+}
+
+// A "plain" motion fades or slides an element on a stock curve. Colour shifts count as plain too.
+const PLAIN_PROPS = new Set(['opacity', 'transform', 'translate', 'scale', 'visibility', 'color', 'background-color',
+  'backgroundColor', 'border-color', 'border-top-color', 'border-right-color', 'border-bottom-color', 'border-left-color', 'box-shadow', 'boxShadow']);
+function overshoots(easing) {
+  if (/^linear\(/.test(easing)) return true; // springs are emitted as linear() curves
+  const m = /^cubic-bezier\(([^)]*)\)$/.exec(easing);
+  if (!m) return false;
+  const [, y1, , y2] = m[1].split(',').map(Number);
+  return y1 < 0 || y1 > 1 || y2 < 0 || y2 > 1;
+}
+const isPlain = (r) => r.props.every((p) => PLAIN_PROPS.has(p)) && r.frames <= 2 && !overshoots(r.easing);
+
+/**
+ * Play every beat live (10x fast-forward) and look for motion monotony: every beat fading/sliding
+ * in, the same motion signature beat after beat, one easing curve for everything, one beat change.
+ * @param {import('playwright').Browser} browser
+ * @param {string} input
+ * @param {number} total
+ * @param {string[]} allow  META.lintAllow
+ */
+async function checkMotion(browser, input, total, allow) {
+  const warnings = [];
+  const context = await browser.newContext({ viewport: { width: 960, height: 540 }, deviceScaleFactor: 1 });
+  try {
+    await context.addInitScript(variableClockInitScript);
+    await context.addInitScript(motionProbeInitScript);
+    const page = await context.newPage();
+    const cdp = await context.newCDPSession(page);
+    await cdp.send('Animation.enable');
+    await page.goto(resolveDeckUrl(input, { bare: true, p: 1 }), { waitUntil: 'domcontentloaded' });
+    await waitForDeckReady(page);
+    const speed = 10;
+    await page.evaluate((r) => window.__bdSetClockRate(r), speed);
+    await cdp.send('Animation.setPlaybackRate', { playbackRate: speed });
+    const transitions = [];
+    for (let i = 0; i < total; i += 1) {
+      transitions.push(
+        await page.evaluate((idx) => {
+          window.__bdMotionBeat = idx;
+          window.__beatdeck.goTo(idx);
+          return document.body.dataset.beatTransition;
+        }, i)
+      );
+      await page.waitForTimeout(340);
+    }
+    const log = await page.evaluate(() => window.__bdMotionLog || []);
+    const byBeat = Array.from({ length: total }, () => []);
+    for (const r of log) if (r.beat >= 0 && r.beat < total && !r.loop) byBeat[r.beat].push(r);
+
+    const label = (a, b) => (a === b ? `beat ${a + 1}` : `beats ${a + 1}-${b + 1}`);
+    const moving = byBeat.map((rs, i) => ({ i, rs })).filter((b) => b.rs.length > 0);
+    const plain = moving.filter((b) => b.rs.every(isPlain));
+    if (!allow.includes('motion-flat') && moving.length >= 4 && plain.length / moving.length >= 0.75) {
+      warnings.push({
+        beat: 'deck',
+        type: 'motion-flat',
+        message: `${plain.length} of ${moving.length} animated beats only fade or slide elements in (beats ${plain.map((b) => b.i + 1).join(', ')}); give this world its own verbs: masks and wipes, drawn lines, springs, split type, path motion, stamps, match cuts (see craft-and-direction.md §2)`,
+      });
+    }
+
+    if (!allow.includes('motion-repeat')) {
+      const sig = byBeat.map((rs) =>
+        rs.length ? `${[...new Set(rs.flatMap((r) => r.props))].sort().join(',')}|${[...new Set(rs.map((r) => r.easing))].sort().join(',')}` : ''
+      );
+      let start = 0;
+      for (let i = 1; i <= total; i += 1) {
+        if (i < total && sig[i] && sig[i] === sig[start]) continue;
+        if (sig[start] && i - start >= 3) {
+          warnings.push({
+            beat: label(start, i - 1),
+            type: 'motion-repeat',
+            message: `${i - start} beats in a row move the same properties with the same easing; change the gesture, tempo or direction between them`,
+          });
+        }
+        start = i;
+      }
+    }
+
+    const finite = byBeat.flat().filter((r) => r.easing !== 'js' && r.easing !== 'linear');
+    if (!allow.includes('motion-one-ease') && finite.length >= 12) {
+      const counts = new Map();
+      finite.forEach((r) => counts.set(r.easing, (counts.get(r.easing) || 0) + 1));
+      const [topEase, topCount] = [...counts.entries()].sort((a, b) => b[1] - a[1])[0];
+      if (topCount / finite.length >= 0.85 && !finite.some((r) => overshoots(r.easing))) {
+        warnings.push({
+          beat: 'deck',
+          type: 'motion-one-ease',
+          message: `${Math.round((topCount / finite.length) * 100)}% of ${finite.length} animations use the same curve (${topEase}); give arrivals, exits, impacts and camera moves their own easing or a spring`,
+        });
+      }
+    }
+
+    const changes = transitions.slice(1).filter((t) => typeof t === 'string' && t !== '');
+    if (!allow.includes('transition-monotony') && changes.length >= 4) {
+      const counts = new Map();
+      changes.forEach((t) => counts.set(t, (counts.get(t) || 0) + 1));
+      const [topType, topCount] = [...counts.entries()].sort((a, b) => b[1] - a[1])[0];
+      if (topCount / changes.length >= 0.8) {
+        warnings.push({
+          beat: 'deck',
+          type: 'transition-monotony',
+          message: `${topCount} of ${changes.length} beat changes use "${topType}"; pick each beat's transition from what the story does there (continue: match or camera, turn: cut or wipe, go deeper: iris or zoom)`,
+        });
+      }
+    }
+  } finally {
+    await context.close().catch(() => {});
+  }
+  return warnings;
+}
+
 async function main() {
-  const { positional, flags } = parseCliArgs(process.argv.slice(2), new Set(['json', 'strict']));
+  const { positional, flags } = parseCliArgs(process.argv.slice(2), new Set(['json', 'strict', 'motion']));
   if (positional.length === 0) {
     printUsage();
     process.exit(1);
@@ -697,6 +879,10 @@ async function main() {
 
       for (const issue of await checkStageFit(page.context(), input, total)) {
         failures.push({ beat: 'deck', ...issue });
+      }
+
+      if (flags.motion !== false) {
+        warnings.push(...(await checkMotion(page.context().browser(), input, total, apiInfo.lintAllow)));
       }
 
       return { total, failures, warnings };

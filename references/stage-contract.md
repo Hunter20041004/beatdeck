@@ -87,6 +87,20 @@ Enabled when neither `?still`, `?video`, nor `?bare` is active (always ignore ke
 
 ---
 
+## 5b. Beat Changes and Motion Helpers (skeleton runtime)
+
+These are not required by the v1.0 contract (CLI tools only need the API above), but `templates/skeleton.html` implements them and the craft guide assumes them.
+
+- **`MOTION` (DESIGN block)**: the deck's motion personality: default `transition`, named `ease` curves, default `spring`. Replace it with the chosen world's values.
+- **`beat.transition`**: optional per-beat override of the change *into* that beat. A string (`"cut"`, `"fade"`, `"push-left"`, `"cover-up"`, `"reveal-right"`, `"wipe-down"`, `"iris"`, `"zoom"`, `"blur"`, `"match"`, `"camera"`) or an object `{ type, dir, ms, ease, origin }`. `origin` (`"#selector"` in the entering scene, or `{ x, y }` stage px) sets where `iris` and `zoom` open from. Going backward replays the leaving beat's transition in reverse. The leaving scene keeps its final frame (`.is-leaving`) until the change ends; pressing next mid-change finishes it immediately. `?still` never animates a change.
+- **`match`**: elements carrying the same `data-match="key"` in the leaving and entering scenes fly from the old box to the new one (FLIP on `translate` + `scale`); the rest of the entering scene fades in around them. Best between beats that share a `cam`.
+- **`camera`**: no fade; both scenes stay visible while `#world` glides to the new `cam` (scenes positioned at different world coordinates, e.g. `style="left:1920px"`).
+- **`data-depth="d"`**: parallax for `#world` camera moves. The element drifts at `d` × the camera's motion (`0.3` far, `1` normal, `1.4` near) through the CSS `translate` property, and sits where it was authored when the camera is at its own scene's `cam`.
+- **Helpers** passed to `CHOREO[id](scene, helpers)`: `at`, `animate`, `tween`, `spring`, `stagger`, `splitText`, `wipe`, `iris`, `stamp`, `shake`, `strike`, `draw`, `followPath`, `morph`, `cursor`, `ambient`, `countUp`, `typewriter`, plus `isStill`/`isVideo`. Web-Animations helpers are tracked per scene: finished when the beat is left, cancelled when it is entered again, and jumped to their end under `?still`. Signatures and use cases: [craft-and-direction.md §5](craft-and-direction.md).
+- **Clock**: helpers only use `setTimeout`, `requestAnimationFrame`, `performance.now()` and Web Animations, so `record-video.mjs` and `filmstrip.mjs` can slow them down exactly.
+
+---
+
 ## 6. Linting Hooks (`scripts/lint.mjs`)
 
 To let headless Chromium verify layout integrity on every beat:
@@ -95,13 +109,14 @@ To let headless Chromium verify layout integrity on every beat:
 - **Text containment**: Visible text nodes inside `#stage` must remain inside the `1920×1080` stage bounds (within `±1px` normalized tolerance).
 - **Image integrity**: Every visible `<img>` inside `#stage` must satisfy `img.complete && img.naturalWidth > 0`.
 - **Craft warnings**: `lint.mjs` also warns (and fails under `--strict`) on bordered/shadowed card density, card-inside-card nesting, emoji in visible text, overlapping text from different nodes, the same boxed layout on consecutive beats, and visible `[data-beatdeck-skeleton]` placeholders.
+- **Motion warnings**: lint also plays every beat live (10× fast-forward) and records what moves. It warns on `motion-flat` (3 of 4 animated beats only fade or slide elements in on a stock curve), `motion-repeat` (3+ consecutive beats with the same properties and easing), `motion-one-ease` (85%+ of animations on one curve, no spring or overshoot) and `transition-monotony` (80%+ of beat changes are the same type; read from `document.body.dataset.beatTransition`, which the skeleton runtime sets). Deck-wide exceptions go in `META.lintAllow` (e.g. `["transition-monotony"]` for a deliberately all-cut deck). Skip the pass with `--motion=false`.
 - **Intentional exceptions**: `data-lint-allow="card-shell emoji text-collision"` (space- or comma-separated warning types) on an element exempts its subtree, e.g. a deliberate storyboard strip or an ink stamp layered over artwork.
 
 ---
 
 ## 7. Minimal Reference Skeleton (with `at()` Intra-Beat Choreography)
 
-> **Prefer the generated skeleton.** `node <skill-dir>/scripts/new-deck.mjs <deck.html> --title "…" --ids a,b,c` writes [`templates/skeleton.html`](../templates/skeleton.html) with the whole contract wired: scaling, query modes, ready signal, `#world` camera (`beat.cam`), notes drawer, PiP zone, HUD, keys/clicks, and `?still`-safe helpers `at`, `animate`, `draw`, `countUp`, `typewriter` passed to `CHOREO[beatId](sceneEl, helpers)`. It carries no visual style: replace every `DESIGN` block and `data-beatdeck-skeleton` scene. The fragments below explain the moving parts.
+> **Prefer the generated skeleton.** `node <skill-dir>/scripts/new-deck.mjs <deck.html> --title "…" --ids a,b,c` writes [`templates/skeleton.html`](../templates/skeleton.html) with the whole contract wired: scaling, query modes, ready signal, `#world` camera (`beat.cam`), notes drawer, PiP zone, HUD, keys/clicks, and `?still`-safe helpers `at`, `animate`, `draw`, `countUp`, `typewriter` passed to `CHOREO[beatId](sceneEl, helpers)` along with the motion helpers in §5b. It carries no visual style: replace every `DESIGN` block and `data-beatdeck-skeleton` scene. The fragments below explain the moving parts.
 
 ```html
 <style>

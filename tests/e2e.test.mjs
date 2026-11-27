@@ -10,6 +10,7 @@ import { isSloganHeadline } from '../scripts/lib/copy-rules.mjs';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
 const DEMO_DECK = path.join(ROOT, 'examples', 'beatdeck-intro', 'deck.html');
+const MOTION_DECK = path.join(ROOT, 'examples', 'motion-gallery', 'deck.html');
 
 // 1x1 valid PNG (68 bytes)
 const TINY_PNG = Buffer.from(
@@ -686,6 +687,80 @@ async function runTests() {
     assert.notEqual(deadKeysLint.status, 0, 'lint must fail a deck whose keyboard navigation is dead');
     assert.match(deadKeysLint.stderr, /\(controls\) ArrowRight/);
     console.log('   Stage-fit / controls lint failures caught.');
+
+    // 13) Motion: gallery passes strict lint, helpers settle under ?still, beat changes play and clean up,
+    //     filmstrip renders, and lint flags a deck where every beat fades up the same way.
+    console.log('13) Checking motion helpers, beat changes, filmstrip and motion lint...');
+    const galleryLint = runNode('scripts/lint.mjs', [MOTION_DECK, '--strict', '--json']);
+    assert.equal(galleryLint.status, 0, `motion gallery must pass lint --strict:\n${galleryLint.stdout}${galleryLint.stderr}`);
+
+    const motionBrowser = await launchBrowser();
+    try {
+      const page = await (await motionBrowser.newContext({ viewport: { width: 1920, height: 1080 } })).newPage();
+      const errors = [];
+      page.on('pageerror', (e) => errors.push(e.message));
+      const stillAt = async (p) => {
+        await page.goto(`${pathToFileURL(MOTION_DECK).href}?still&p=${p}`);
+        await page.waitForFunction(() => document.body.dataset.ready === '1');
+      };
+      await stillAt(2);
+      assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector('.s2-stamp')).opacity), '1', 'stamp must settle visible under ?still');
+      await stillAt(3);
+      assert.match(await page.evaluate(() => getComputedStyle(document.querySelector('.s3-new')).clipPath), /^inset\(0(px|%)?( 0(px|%)?)*\)$|^none$/, 'wipe must settle open under ?still');
+      await stillAt(4);
+      const marker = await page.evaluate(() => document.querySelector('#b4-marker').getAttribute('transform'));
+      assert.match(marker || '', /^translate\(17[12]\d/, `followPath must settle at the end of the route, got ${marker}`);
+      await stillAt(5);
+      assert.equal(await page.evaluate(() => document.querySelector('#b5-num').textContent), '12', 'countUp must settle on its target');
+      await stillAt(7);
+      const d = await page.evaluate(() => document.querySelector('#b7-curve').getAttribute('d'));
+      assert.notEqual(d.split('L').length, 2, 'morph must settle on the spring curve');
+
+      await page.goto(pathToFileURL(MOTION_DECK).href);
+      await page.waitForFunction(() => document.body.dataset.ready === '1');
+      const state = () => page.evaluate(() => ({
+        t: document.body.dataset.beatTransition,
+        leaving: document.querySelectorAll('.scene.is-leaving').length,
+        active: document.querySelectorAll('.scene.is-active').length,
+      }));
+      await page.evaluate(() => window.__beatdeck.goTo(1));
+      assert.deepEqual(await state(), { t: 'cut', leaving: 0, active: 1 }, 'cut must not keep a leaving scene');
+      await page.evaluate(() => window.__beatdeck.goTo(2));
+      assert.deepEqual(await state(), { t: 'wipe', leaving: 1, active: 1 }, 'wipe must keep the old scene during the change');
+      await page.evaluate(() => { window.__beatdeck.goTo(3); window.__beatdeck.goTo(4); });
+      assert.equal((await state()).leaving, 1, 'a change interrupted by the next one must finish first');
+      await page.waitForTimeout(1300);
+      assert.deepEqual(await state(), { t: 'match', leaving: 0, active: 1 }, 'leaving scene must be released after the change');
+      await page.evaluate(() => window.__beatdeck.goTo(3));
+      assert.equal((await state()).t, 'match', 'going back must replay the left beat\'s change');
+      assert.deepEqual(errors, [], `runtime errors while changing beats: ${errors.join('; ')}`);
+    } finally {
+      await motionBrowser.close();
+    }
+
+    const stripDir = path.join(tmpDir, 'filmstrip');
+    const strip = runNode('scripts/filmstrip.mjs', [MOTION_DECK, '--beats', '5', '--times', '0,400', '--out', stripDir]);
+    assert.equal(strip.status, 0, strip.stderr);
+    assert.ok(fs.existsSync(path.join(stripDir, 'filmstrip.png')) && fs.existsSync(path.join(stripDir, 'motion-05.png')));
+
+    const flatPath = path.join(tmpDir, 'flat-motion', 'deck.html');
+    assert.equal(runNode('scripts/new-deck.mjs', [flatPath, '--ids', 'a,b,c,d,e,f']).status, 0);
+    const flatSrc = fs.readFileSync(flatPath, 'utf8').replace(
+      /\/\/ "a": \(scene[\s\S]*?\/\/ \},/,
+      ['a', 'b', 'c', 'd', 'e', 'f']
+        .map((id) => `"${id}": (scene, { tween }) => { tween(scene.querySelectorAll("h1, p"), { opacity: [0, 1], transform: ["translateY(20px)", "none"] }, { ms: 500 }); },`)
+        .join('\n')
+    );
+    assert.notEqual(flatSrc, fs.readFileSync(flatPath, 'utf8'), 'flat-motion fixture must inject choreography');
+    fs.writeFileSync(flatPath, flatSrc, 'utf8');
+    const flatLint = runNode('scripts/lint.mjs', [flatPath, '--json']);
+    const flatTypes = new Set(JSON.parse(flatLint.stdout).warnings.map((w) => w.type));
+    for (const t of ['motion-flat', 'motion-repeat', 'motion-one-ease', 'transition-monotony']) {
+      assert.ok(flatTypes.has(t), `lint must flag ${t} on a deck that fades every beat up the same way (got ${[...flatTypes].join(', ')})`);
+    }
+    const noMotion = JSON.parse(runNode('scripts/lint.mjs', [flatPath, '--json', '--motion=false']).stdout);
+    assert.ok(!noMotion.warnings.some((w) => /^motion-|transition-monotony/.test(w.type)), '--motion=false must skip the motion pass');
+    console.log('   Motion checks passed.');
 
     console.log('ALL E2E TESTS PASSED');
   } finally {

@@ -9,13 +9,14 @@ Beatdeck treats a presentation as a short directed film on a fixed `1920x1080` c
 Never jump straight into writing `BEATS` or CSS with a single default aesthetic. Before crafting assets or scripting beats, synthesize the user's subject, audience, and tone, then propose **2–3 genuinely distinct visual world directions** plus a recommended **Motion Intensity Tier**.
 
 ### How to Craft Non-Generic Proposals
-Each proposal must inhabit a different physical or conceptual world—never three color swaps of the same boxed layout. Specify five concrete elements for every option:
+Each proposal must inhabit a different physical or conceptual world—never three color swaps of the same boxed layout. Specify these concrete elements for every option:
 1. **Spatial Metaphor**: What physical or mental space does the `1920x1080` stage represent? (e.g., an editorial light-table, a dispatch console, a folded architectural blueprint, an archival streetscape elevation, a sunlit studio wall, a broadcast control deck).
 2. **Surface & Palette**: Exact paper/ground tone, primary ink contrast, and 1–2 purposeful accents derived from the topic's real artifacts.
 3. **Typography Voice**: Display/serif/sans/mono pairing tuned to the subject (with realistic CJK/Latin system fallbacks for offline headless rendering).
 4. **Visual Signature**: One recurring structural motif or camera move that belongs uniquely to this topic (e.g., a vertical day/night split line, a continuous ledger spine, a zooming microscope reticle).
 5. **Primary Card-Free Archetype**: Which structural composition archetype(s) from Section 3 anchor the deck without falling back on boxed cards.
-6. **Copy Voice**: Who is speaking, in what register (plain-spoken engineer, editorial narrator, founder pitching), and a short list of words this speaker would never say. Draw the banned list from [ai-tells.md](ai-tells.md) plus anything the user's industry overuses.
+6. **Motion Personality**: How this world moves (see §2): its material, the 2–3 beat changes it uses, its entrance and emphasis verbs, its easing signature, and its one signature move.
+7. **Copy Voice**: Who is speaking, in what register (plain-spoken engineer, editorial narrator, founder pitching), and a short list of words this speaker would never say. Draw the banned list from [ai-tells.md](ai-tells.md) plus anything the user's industry overuses.
 
 ### Alignment Protocol
 - Present the 2–3 directions side by side, highlight which one you recommend (and which Motion Intensity Tier fits best), and ask the user **once** to pick, combine, or tweak before you start crafting hero assets.
@@ -23,15 +24,56 @@ Each proposal must inhabit a different physical or conceptual world—never thre
 
 ---
 
-## 2. Motion Intensity Tiers
+## 2. Motion: Personality, Tier, Transitions, Rhythm
 
-Match motion density to the subject and venue rather than animating everything at maximum speed. Pick one tier intentionally:
+Motion is where decks most often look machine-made. Left alone, every element fades in and drifts up 20px on the same curve, every beat cross-fades into the next, and the audience learns the pattern by the third slide. Decide motion the same way you decide palette: from the subject's material, once, before writing choreography.
+
+### 2.1 Motion personality (character)
+
+A **tier** says how much moves; a **personality** says *how* it moves. Every direction proposal names one. Derive it from what the world is made of:
+
+| World material | Beat changes | Entrance verbs | Emphasis / signature | Easing & tempo |
+| :--- | :--- | :--- | :--- | :--- |
+| **Paper / dossier / print** | `cut`, `wipe-*` | `wipe` a line at a time, slide in from the margin | `stamp` with `shake`, `strike` | short, firm `out`; no overshoot; holds between actions |
+| **Machine / instrument / dashboard** | `push-*`, `cut` | `spring` with high stiffness, snap into detents | needle swing, `countUp` with a detent spring | fast in, crisp settle; small overshoot |
+| **Film / documentary / editorial** | `blur` (rack focus), `camera`, `cut` | `splitText` by word, `iris` | `zoom` through a detail, `match` cut | slow `inOut`, long holds, one fast cut for the turn |
+| **Map / journey / process** | `iris`, `camera` with `data-depth` | `draw` the route | `followPath` marker, `match` it into the next beat | eased travel, stops land with a soft spring |
+| **Software / product** | `match` between states, `cover-*` | panels `cover` in, `wipe` new rows | `cursor` with clicks that change the UI | quick (200–400 ms), linear-feeling, no bounce |
+| **Play / consumer / game** | `zoom`, `push-up` | `stagger` with `from: "random"` and a loose `spring` | squash on impact, `ambient` idle loop | loose springs (damping 6–12), lively tempo |
+| **Data / research** | `fade`, `match` | `draw` axes then data | `morph` one chart state into the next | measured `inOut`; motion only where the data changes |
+
+Write the result into the deck's `MOTION` block (default transition, named easings, default spring) and keep it there. One deck uses **2–3 beat-change types** and **one signature move** that belongs to this subject alone (the stamp, the route marker, the rack focus). Everything else stays quiet so the signature lands.
+
+### 2.2 Motion tier (density)
 
 | Tier | Motion Grammar | Best Suited For |
 | :--- | :--- | :--- |
-| **`Measured`** | Calm architectural reveals, slow purposeful camera glides, crisp rule extensions and editorial type wipes. Few or zero decorative loops. | Luxury editorial talks, archival dossiers, minimalist essays, board briefings. |
-| **`Choreographed`** | 2–3 sequenced intra-beat actions via `at(ms, fn)`, SVG path drawing (`stroke-dashoffset`), live numeric roll-ups (`countUp`), and persistent motif morphing across beats. | Product demos, conference keynotes, research findings, technical walkthroughs. |
-| **`Kinetic`** | Dense multi-stage beat timelines, simulated cursor/UI interactions, mechanical flips/stamps, optical flicker or particle drift, and `liveOnly` ambient motion. | Game showcases, consumer launches, interactive trailers, high-energy pitch reels. |
+| **`Measured`** | One action per beat, long holds, slow camera glides, hard cuts at turns. Few or zero loops. | Luxury editorial talks, archival dossiers, minimalist essays, board briefings. |
+| **`Choreographed`** | 2–3 sequenced actions per beat via `at(ms, fn)`, drawn paths, roll-ups, persistent protagonists carried across beats with `match`. | Product demos, conference keynotes, research findings, technical walkthroughs. |
+| **`Kinetic`** | Dense beat timelines, cursor interactions, stamps and impacts, random staggers, split type, `liveOnly` ambient motion. | Game showcases, consumer launches, interactive trailers, high-energy pitch reels. |
+
+### 2.3 Beat changes (`MOTION.transition`, `beat.transition`)
+
+Every beat change is a story decision. Pick it from what the story does at that boundary, not from the default:
+
+| The story here… | Use | Notes |
+| :--- | :--- | :--- |
+| turns, delivers a verdict, contradicts | `cut` | The strongest change is often none. Let the new beat's first action carry the energy. |
+| continues with the same subject | `match` (shared `data-match` elements fly to their new place) or `camera` (pan the `#world`) | Keeps the audience's eye on one protagonist. |
+| goes deeper into a detail | `iris` (with `origin: "#selector"`) or `zoom` (with `origin`) | The origin should be the thing you zoom into. |
+| moves forward in time or sequence | `push-left` / `push-up` | Going back automatically plays it in reverse. |
+| lays something new over the last thing | `cover-*` / `reveal-*` | Panels, documents, layers. |
+| replaces a statement | `wipe-*` | Hard-edged; pairs well with `strike`. |
+| shifts focus or mood | `blur` | A rack focus; use sparingly. |
+| needs nothing special | `fade` | Fine as a default, never on every beat (lint: `transition-monotony`). |
+
+### 2.4 Rhythm
+
+- **Vary tempo.** Alternate a busy beat with a still one. A beat with one slow action after a dense beat reads as emphasis.
+- **Vary direction and origin.** Staggers can run `from: "center"`, `"end"`, `"edges"`, `"random"` or an index, not only left to right.
+- **Exits matter.** The leaving beat keeps its final frame during the change; choose a change that moves it with intent (push it away, wipe over it, zoom through it).
+- **Count the gestures.** No two consecutive beats should use the same entrance gesture with the same easing (lint: `motion-repeat`). If 3 of 4 beats only fade and slide, the deck has no motion design yet (lint: `motion-flat`).
+- **Watch it, don't imagine it.** `snapshot.mjs` only sees the final frame. Run `filmstrip.mjs` and read each row left to right: is the first frame of a beat already interesting, does something different happen in each beat, does the signature move land?
 
 ---
 
@@ -126,8 +168,30 @@ Instead of treating a beat as one instantaneous state swap, direct what happens 
 
 ### Motion Vocabulary
 
-| Primitive | Mechanism & Role | `?still` Settlement |
+All helpers arrive in `CHOREO[id](scene, helpers)`. Every one is `?still`-safe (it lands on its final frame instantly), cancels cleanly when the presenter moves on, and runs under `record-video.mjs` slow motion. `ease` accepts a `MOTION.ease` name (`out`, `in`, `inOut`, `snap`, `linear`), any CSS easing, or a spring `{ stiffness, damping, mass }`.
+
+| Helper | What it does | Good for |
 | :--- | :--- | :--- |
+| `at(ms, fn, { liveOnly })` | Schedule a step inside the beat. | Sequencing; `liveOnly` loops. |
+| `tween(el, keyframes, { ms, delay, ease })` | Web Animations keyframes, held at both ends. One tween per property per element per beat; chain with keyframe offsets. | Any custom move. |
+| `spring(el, keyframes, { stiffness, damping, mass, delay })` | Real damped-spring settle (overshoot included). | Physical arrivals, snaps, squash. |
+| `stagger(els, (el, delay, i) => …, { each, from, delay, seed })` | Offsets a group; `from`: `start`, `end`, `center`, `edges`, `random` (seeded), or an index. | Crowds, grids, letters. |
+| `splitText(el, { by: "char" \| "word" })` | Wraps text in inline-block spans (keeps `<br>`), returns them. Use `char` for CJK. | Kinetic type with `stagger`. |
+| `wipe(el, { from })` / `iris(el, { x, y })` | Hard-edged clip reveal / circular aperture. | Replacing statements, revealing photos. |
+| `stamp(el, { rotate, impact })` / `shake(el, { amp })` | Ink-stamp hit, optional jolt of another element. | Verdicts, approvals, impacts. |
+| `strike(el, { color, thickness })` | Draws a rule through text. | Corrections, before/after. |
+| `draw(path, ms, { delay, ease })` | Stroke drawing. | Routes, signatures, chart lines. |
+| `followPath(svgEl, path, { rotate })` | Moves an SVG element along a path. | Journeys, flows, a marker riding a chart. |
+| `morph(path, toD, { fromD })` | Interpolates two `d` strings with the same command structure. | Chart state changes, shapes that transform. |
+| `cursor(pointer, steps)` | Moves a pointer through `[x, y]` / `{ x, y, click, onClick, hold }` steps and presses. | Product walkthroughs. |
+| `countUp(el, to, ms, opts)` / `typewriter(el, text, ms)` | Number roll-up / typed text. Typewriter only for things that are actually typed. | Metrics, search boxes, commands. |
+| `ambient(el, keyframes, { ms })` | Infinite idle loop, live only. | A blinking caret, a slow breathing glow. |
+| `data-depth="0.4"` (markup) | Parallax: drifts at that fraction of a `cam` move. | Depth during `camera` changes. |
+| `data-match="key"` (markup) | Pairs elements across beats for the `match` change. | Persistent protagonists. |
+
+`examples/motion-gallery/deck.html` shows each beat change and helper once, with when to use it.
+
+--- | :--- | :--- |
 | **`at(ms, fn, { liveOnly })`** | Sequences beat actions at explicit millisecond offsets (e.g., `0ms` camera settle, `280ms` path draw, `620ms` stamp). | Non-`liveOnly` runs immediately in order; `liveOnly` skipped. |
 | **Persistent protagonist** | Shared DOM/SVG element anchored in `#world` or `#stage` whose class/transform evolves across consecutive beats. | Snaps directly to target transform/state. |
 | **`draw` (`stroke-dashoffset`)** | Animates SVG strokes from `offset = totalLength` to `0` to trace connectors, signatures, routes, or chart curves. | Sets `stroke-dashoffset: 0` immediately. |

@@ -1,6 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { parseCliArgs, resolveDeckUrl, waitForDeckReady, withPage } from './lib/browser.mjs';
+import { parseBeatSelection, parseCliArgs, resolveDeckUrl, waitForDeckReady, withPage } from './lib/browser.mjs';
+
+export { parseBeatSelection };
 
 function printUsage() {
   console.error(
@@ -15,28 +17,6 @@ function escapeHtml(text) {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
-}
-
-/**
- * Parse a 1-based beat selection such as "1,3-5,9" into sorted unique 0-based indices.
- * @param {string | undefined} spec
- * @param {number} total
- * @returns {number[]}
- */
-export function parseBeatSelection(spec, total) {
-  if (!spec) return Array.from({ length: total }, (_, i) => i);
-  const out = new Set();
-  for (const part of String(spec).split(',').map((s) => s.trim()).filter(Boolean)) {
-    const m = part.match(/^(\d+)(?:-(\d+))?$/);
-    if (!m) throw new Error(`Invalid --beats segment "${part}" (use e.g. 1,3-5)`);
-    const a = Number(m[1]);
-    const b = m[2] ? Number(m[2]) : a;
-    for (let n = Math.min(a, b); n <= Math.max(a, b); n += 1) {
-      if (n < 1 || n > total) throw new Error(`Beat ${n} out of range 1..${total}`);
-      out.add(n - 1);
-    }
-  }
-  return Array.from(out).sort((x, y) => x - y);
 }
 
 function buildSheetHtml(shots, meta, cols) {
