@@ -4,18 +4,45 @@ Beatdeck treats a presentation as a short directed film on a fixed `1920x1080` c
 
 ---
 
+## 0. The Heart: Promise and Protagonist
+
+Before any visual decision, find what the subject *is*. A deck that tours features in order is a manual; a deck built around its heart is a story.
+
+### 0.1 Find it in the subject's own words
+- **Read how the subject describes itself:** the README's first lines, the product or design spec's purpose, the pitch, the brand guide, the about page, the paper's abstract. Do not start from the feature list.
+- **Write the promise** in one sentence, as close to the subject's own words as possible: what someone gets, through what.
+- **Name the protagonist**: the one thing that promise depends on. It is usually one of:
+
+| Kind | Examples |
+| :--- | :--- |
+| A character | a product's mascot or assistant that does the work; a game's hero; the person the service is for |
+| A mechanism | the engine that decides, the machine that re-plans, the rule that protects |
+| An artifact | the map, the ledger, the device, the record that everything happens on |
+| A finding | the one result a study stands on |
+
+- If the subject has a named character, mascot or assistant, it is almost always the protagonist. Features are its supporting cast.
+
+### 0.2 Let it own the deck
+- **Meet it early** (within the first three beats) and **keep meeting it**: it appears, acts or is referred to on screen in at least a third of the beats. Mark it with `data-protagonist` wherever it appears. Lint: `protagonist`.
+- **It is hero asset number one.** Build it at full fidelity from the subject's own assets (SVG, colours, proportions, expressions). A character must look and behave like itself, not like a chat panel or a logo.
+- **It drives the signatures and the changes.** At least one signature moment (§2.5) is the protagonist doing what the promise says, and at least one designed beat change (§2.7) is its gesture.
+- **The world serves it.** The visual direction is the place the protagonist lives in, not a theme next to it.
+- **Cover test:** hide the protagonist in every beat. If the deck still makes sense, it is a feature tour; rebuild the outline around the protagonist.
+
+---
+
 ## 1. Visual Direction Proposals & Alignment
 
 Never jump straight into writing `BEATS` or CSS with a single default aesthetic. Before crafting assets or scripting beats, synthesize the user's subject, audience, and tone, then propose **2–3 genuinely distinct visual world directions**, each with its motion register (§2).
 
 ### How to Craft Non-Generic Proposals
-Each proposal must inhabit a different physical or conceptual world—never three color swaps of the same boxed layout. Specify these concrete elements for every option:
+Each proposal must inhabit a different physical or conceptual world—never three color swaps of the same boxed layout. Every direction is a different place for the **same protagonist** (§0), and says how the protagonist looks and moves in it. Specify these concrete elements for every option:
 1. **Spatial Metaphor**: What physical or mental space does the `1920x1080` stage represent? (e.g., an editorial light-table, a dispatch console, a folded architectural blueprint, an archival streetscape elevation, a sunlit studio wall, a broadcast control deck).
 2. **Surface & Palette**: Exact paper/ground tone, primary ink contrast, and 1–2 purposeful accents derived from the topic's real artifacts.
 3. **Typography Voice**: Display/serif/sans/mono pairing tuned to the subject (with realistic CJK/Latin system fallbacks for offline headless rendering).
 4. **Visual Signature**: One recurring structural motif or camera move that belongs uniquely to this topic (e.g., a vertical day/night split line, a continuous ledger spine, a zooming microscope reticle).
 5. **Primary Card-Free Archetype**: Which structural composition archetype(s) from Section 3 anchor the deck without falling back on boxed cards.
-6. **Motion Register**: How this deck moves (see §2): the register for this kind of presentation, the default entrance and beat change, the deck's bridge (§2.7: what motif carries the viewer into a new chapter), and the two or three signature moments (which beats, which gesture, why there; §2.5).
+6. **Motion Register**: How this deck moves (see §2): the register for this kind of presentation, the default entrance and beat change, the deck's small vocabulary of designed beat changes (§2.7: which story relation each one carries, one of them the protagonist's), and the two or three signature moments (which beats, which gesture, why there; §2.5).
 7. **Copy Voice**: Who is speaking, in what register (plain-spoken engineer, editorial narrator, founder pitching), and a short list of words this speaker would never say. Draw the banned list from [ai-tells.md](ai-tells.md) plus anything the user's industry overuses.
 
 ### Alignment Protocol
@@ -65,9 +92,10 @@ Choose each beat's motion from its job, not from the helper list. The quiet colu
 ### 2.3 Budget and rhythm
 
 - **Most beats are quiet.** About three quarters of the beats use only `rise`, `unveil`, `focus`, `draw`, `countUp` or `morph`, and change with `fade`, `dip`, `cut`, `match` or `camera`.
+- **The protagonist moves most.** When something on stage has a character, the signature moments are it acting, not effects around it.
 - **Accents are rare** (about one beat in six): stamp, shake, iris, cursor, typewriter, split type. Lint: `motion-accent-overuse`. This is a different thing from the two or three signature moments in §2.5, which make the content itself move.
 - **One gesture per beat.** If a beat needs three effects to be interesting, the composition is the problem. Lint: `motion-busy`.
-- **At most two showy stock beat-change types per deck** (push, wipe, iris, zoom, blur…), each tied to a story turn. Lint: `transition-variety`. The deck's own bridge (§2.7) does not count against this.
+- **At most two showy stock beat-change types per deck** (push, wipe, iris, zoom, blur…), each tied to a story turn. Lint: `transition-variety`. The deck's own designed changes (§2.7) do not count against this.
 - **Not a fade at every click.** `dip` is the quiet default inside a chapter, not the whole deck's vocabulary. Lint: `transition-monotone`.
 - **Bounce is a register choice, not a default.** The default spring is critically damped and `ease.out` does not overshoot. Lint: `motion-bounce`.
 - **Small travel.** Entrances move 8–40 px; large travel belongs to the camera. Lint: `motion-travel`.
@@ -79,7 +107,7 @@ Choose each beat's motion from its job, not from the helper list. The quiet colu
 | Property | Premium range | Cheap tell |
 | :--- | :--- | :--- |
 | Entrance duration | 700–1100 ms | 200–400 ms pops |
-| Beat change | 640–900 ms `dip` (out, then in, through the background; the default); `fade` only when the two layouts share most of their content; or a true `cut`; the deck's bridge (§2.7) where a chapter starts | 300 ms slides on every click |
+| Beat change | 640–900 ms `dip` (out, then in, through the background; the default); `fade` only when the two layouts share most of their content; or a true `cut`; a designed change (§2.7) where the story relation calls for one | 300 ms slides on every click |
 | Easing | `MOTION.ease.out` = `cubic-bezier(0.16, 1, 0.3, 1)`; `inOut` for camera | overshoot (`snap`, loose springs) everywhere |
 | Distance | 8–40 px lift; masks instead of travel | elements flying in from off-stage |
 | Stagger | 70–120 ms, from the reading start, ≤ 6 items | 30 ms machine-gun letters, random order |
@@ -111,25 +139,37 @@ Rules for them: give each deck **two or three** such moments, each tied to the b
 
 `snapshot.mjs` only sees the final frame. Run `filmstrip.mjs` (add `--frames --times …` to save full-size PNGs of single moments) and read each row: does the motion help the audience read the beat in the right order? Would the beat be worse with no motion at all? If not, remove it. Does the signature moment land, and is it the only one that shouts?
 
-### 2.7 Bridges: the deck's own beat change
+### 2.7 Beat changes are part of the story
 
-The stock changes (`push`, `wipe`, `iris`, `zoom`) are what a slide tool's transition menu offers, and a deck that only fades between beats looks like it never chose. Design one **bridge**: a beat change made from the deck's visual signature (§1), so the change itself says which world we are in.
+A beat change says how two beats relate. When every change looks the same, the deck stops saying it, and a repeated change reads as a template however well it is made. Choose each change from the relation, then draw it from the deck's world and its protagonist (§0):
 
-| Deck world | A bridge that belongs to it |
-| :--- | :--- |
-| Timetable / schedule | the period spine sweeps across like a now-line and the next chapter is revealed behind it |
-| Dossier / paper | the page lifts and turns from the corner, the next page is under it |
-| Map / route | the route line draws across the stage and the camera follows it to the next place |
-| Ledger / data table | the rows roll up like a counter and land on the next chapter's first row |
-| Factory / machine | the conveyor carries the old scene off and brings the next one in |
-| Darkness / horror | the torch sweeps away and the new scene is lit where it lands |
+| How the two beats relate | What the change does | Drawn from |
+| :--- | :--- | :--- |
+| **Same object, next state** (the plan changes, the table re-sorts) | nothing seems to change but the object: invisible `cut` + `carry()` | the living object itself |
+| **Closer look** (a detail of what we just saw) | the camera moves in, or the detail opens up (`camera`, `zoom`/`iris` with `origin`) | the detail |
+| **Before / after, A vs B** | the shared part stays, the difference swaps (`match`, a split that slides) | the compared object |
+| **Time passes** | the world's own clock moves the scene on | a now-line, a calendar page, daylight, a timer |
+| **The protagonist acts** | the protagonist performs the change: walks, points, pulls the next scene in | the protagonist (character, machine, mechanism) |
+| **New chapter, new place** | the world's material carries you: a page turns, a route draws on, a conveyor moves | the world's material |
+| **Pause, recap, close** | quiet `dip`, or a hard `cut` to stillness | nothing |
 
 Rules:
-- **One bridge per deck**, two at most if the world has two materials. It is the deck's beat-change voice, not a menu.
-- **Use it where a chapter starts** (the `chapter` field changes). Inside a chapter, keep `dip`, an invisible `cut` with `carry()`, `match` or `camera`.
-- **Same craft bar as everything else**: 700–1000 ms, `MOTION.ease.inOut`, one thing moving at a time, no bounce, and it must read in reverse (going back plays it with `reverse: true`).
-- **Code it once** in `MOTION.bridges` and refer to it by name in `beat.transition`; the skeleton's comment shows the context (`from`, `to`, a drawing `layer` above both scenes, `run`, `reverse`). `?still`, PDFs and snapshots never play changes, so a bridge cannot break a capture.
-- Check it in `filmstrip.mjs` on the chapter's first beat: the first frames of that row show the bridge.
+- **Build a small vocabulary, not one effect.** Code two to four designed changes in `MOTION.bridges`, each for a relation the deck actually has. A deck with a protagonist gives at least one of them to the protagonist.
+- **No pattern by repetition.** The same designed change never plays twice in a row and on at most a third of the visible changes. Lint: `transition-repeat`. Quiet `dip` and invisible `cut`s fill the rest; they are not a style, they are the absence of one.
+- **Not a fade at every click.** A deck whose every visible change is a fade has not chosen. Lint: `transition-monotone`.
+- **Same craft bar as everything else**: 700–1000 ms, `MOTION.ease.inOut`, one thing moving at a time, physically correct (§2.8), and readable in reverse (going back plays it with `reverse: true`).
+- Stock changes (`push`, `wipe`, `iris`, `zoom`) are a slide tool's menu; use them only when the relation calls for exactly that movement. Lint: `transition-variety`.
+- Check every designed change in `filmstrip.mjs` on the beat it enters, and step through the deck once live, forward and back.
+
+### 2.8 A physical stage: layers, containers, occlusion
+
+The audience reads the stage as a real space. When an object passes *through* a phone's bezel, a page's edge or another object, the illusion breaks, and it breaks during motion, where snapshots never look.
+
+- **Every object has a layer and a home.** Decide what is in front of what (background world, scene objects, the protagonist, overlays) and keep that order through motion.
+- **Containers have an opening and a frame.** A phone has a screen inside a bezel; a page has its margins; a tray has a lip. Something that moves *into* a container enters through its opening: put the destination inside the container with `overflow: hidden`, so it is clipped by the screen as it arrives, or move it *under* the frame (a lower layer), or let the container arrive *around* it after it lands. It never flies across the frame.
+- **Objects do not pass through each other.** Two moving things either avoid each other (stagger, different paths), or one goes behind the other on purpose.
+- **Shared elements keep their material.** A card that becomes a smaller card is still a card; it does not stretch (`carry({ size: true })`) or blink through another object.
+- Lint samples mid-motion: an element drawn across a container's frame (anything marked `data-frame`, or any element with a bezel of 6px or more) while not being inside it is `frame-crossing`. Mark a genuinely intentional crossing with `data-lint-allow="frame-crossing"`.
 
 ---
 

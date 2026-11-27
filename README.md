@@ -15,6 +15,14 @@ An open-source Agent Skill and headless Chromium toolkit for crafting film-like,
 | **Single Source of Truth** | Separate speaker doc & slides drift quickly | Video-only output; no live talk mode | One HTML drives Live Talk, Notes, Script, PDF, Share HTML & MP4 |
 | **Dependencies** | Office / browser SaaS | Node + bundler + React ecosystem | Plain HTML/CSS/JS + Playwright Chromium (`ffmpeg` optional for MP4) |
 
+### What's New in v1.9: Heart First, Changes That Mean Something, a Physical Stage
+
+A second look at a v1.8 deck showed three gaps that were ideas missing from the skill, not rules:
+
+- **The heart comes first** (craft-and-direction §0). Before any look, the deck reads how the subject describes itself, writes its promise in one sentence and names its **protagonist**: the character, mechanism, artifact or finding the promise depends on. The world, the signature moments and the beat changes are built around it, and a cover test checks the deck is not a feature tour. Lint `protagonist` asks for it to be marked (`data-protagonist`), met within three beats and seen in a third of them.
+- **Beat changes follow the story** (§2.7). Each change says how two beats relate (same object, closer look, before/after, time passes, the protagonist acts, new chapter). A deck builds two to four designed changes for the relations it has instead of one effect everywhere. Lint `transition-repeat` catches one designed change used back to back or on most changes.
+- **The stage is physical** (§2.8). Objects keep their layers, enter phones and pages through their openings, and never pass through a bezel or each other. Lint now samples mid-motion and flags `frame-crossing`: something drawn across a container's frame (`data-frame`, or any element with a 6px+ bezel) while not inside it.
+
 ### What's New in v1.8: Designed Beat Changes and a Clearer Flow
 
 - **Bridges.** A deck that only fades between beats looks like it never chose. Each deck now designs one bridge, a beat change grown from its own visual signature (a timetable's now-line sweeping across, a dossier page turning, a route drawing on), coded once in `MOTION.bridges` and used where each chapter starts. See [`references/craft-and-direction.md`](references/craft-and-direction.md) §2.7.
