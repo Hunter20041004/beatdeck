@@ -15,6 +15,10 @@ An open-source Agent Skill and headless Chromium toolkit for crafting film-like,
 | **Single Source of Truth** | Separate speaker doc & slides drift quickly | Video-only output; no live talk mode | One HTML drives Live Talk, Notes, Script, PDF, Share HTML & MP4 |
 | **Dependencies** | Office / browser SaaS | Node + bundler + React ecosystem | Plain HTML/CSS/JS + Playwright Chromium (`ffmpeg` optional for MP4) |
 
+### What's New in v1.11: Questions Come With Answers
+
+Every time the skill asks the deck maker something (who is in the room, what the deck is for, a missing number, the spine, the direction, the outline, a vague revision request), it now offers two to four concrete options worked out from what it has already read, marks one as recommended with the evidence, and leaves room for "or tell me yours". Missing facts are offered as candidates found in the material, with their source, or as ways to handle the gap; an invented value is never an option. Questions go out in one numbered message the deck maker can answer in one line (`1A 2C`), and under the async rule Claude starts on the recommended options right away. See *Asking the Deck Maker* in [`SKILL.md`](SKILL.md).
+
 ### What's New in v1.10: Confirm the Spine Before the Look
 
 The outline check (v1.8) showed the deck maker a list of beats, which is the wrong altitude for the question that matters most: is this the right argument, in the right order? A sound structure survives any visual world; a wrong one cannot be saved by beats or motion. v1.10 makes the structure its own step:

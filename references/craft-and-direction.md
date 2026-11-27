@@ -90,7 +90,14 @@ The promise and the protagonist say what the deck is about. The **spine** says h
 > 4. **04 · Real week** (*for example*, ~20%): last semester's actual timetable, rebuilt in four minutes.
 > 5. **05 · Try it** (*so*, ~10%): open the link before Monday's selection round.
 
-Then ask the questions only the deck maker can answer: does it start where *your* audience is, is this the order you would argue it in, and is anything missing that they must hear, or anything they would skip? Fold the answer in, then record the spine in `META.spine` (§6) so it travels with the deck: `script-export.mjs` prints it above the script with each section's time, and lint `spine` checks that the beats follow it.
+Then ask what only the deck maker can answer, each question with options worked out from the material and one recommended (SKILL.md, *Asking the Deck Maker*):
+
+> **1. Where to start?** **A · Friday night of course selection** (recommended: the README opens on it) · B · The clash itself, cold open · or yours.
+> **2. Order?** **A · As above** (recommended) · B · Proof before the re-plan, for a sceptical room: shows the real week first, then how · or yours.
+> **3. Cut or add?** A · Nothing · **B · Merge 04 into 03, for a 3-minute slot** (recommended if the slot is short) · C · Add a section on privacy, if the judges asked about it last time.
+> Reply like `1A 2A 3B`; I'll go ahead with the recommended ones meanwhile.
+
+Fold the answer in, then record the spine in `META.spine` (§6) so it travels with the deck: `script-export.mjs` prints it above the script with each section's time, and lint `spine` checks that the beats follow it.
 
 **The spine drives what comes after.** The relations at section boundaries pick the designed beat changes (the table above, §2.7). The turn (*but*) and the proof (*for example*) are where the signature moments go (§2.5). The visual directions (§1) are different places for the same spine, never a different argument.
 
@@ -112,7 +119,7 @@ Each proposal must inhabit a different physical or conceptual world—never thre
 
 ### Alignment Protocol
 - Propose directions only for a spine the deck maker has confirmed (§0.3). If they have not answered yet, say which spine the directions assume.
-- Present the 2–3 directions side by side, highlight which one you recommend, and ask the user **once** to pick, combine, or tweak before you start crafting hero assets.
+- Present the 2–3 directions side by side, mark the one you recommend with the reason drawn from the subject and the audience ("recommended: the judges see twenty decks that day; the timetable-as-stage reads from the back row"), and ask the user **once** to pick, combine, or tweak before you start crafting hero assets. Each direction is a lettered option the user can answer with one letter.
 - Skip asking only if the user explicitly tells you to decide for them or when running in a non-interactive headless pipeline—in that case, state the chosen direction, archetype, and register upfront in your plan/summary before writing HTML.
 - If the user may be away for hours (an async project thread, a queued task), ask once and keep working on the direction you recommend while you wait; switch if their answer differs. A stalled thread costs more than a redone hero asset.
 

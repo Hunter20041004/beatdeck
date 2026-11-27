@@ -62,7 +62,7 @@ Motion gives a deck away faster than any colour. Today the usual failure is not 
 | Unsourced or suspiciously round statistics ("90% of teams…", "10× faster"), "studies show…" | Only numbers traceable to a named source; otherwise mark `[missing: …]` and ask | review (fact lens) |
 | Hedged, point-of-view-free claims ("can help", "may enable", "various benefits") | Commit to a claim the speaker can defend | review |
 | Summary slide that restates every previous beat | One synthesis beat that changes how the audience sees the opening scene | review |
-| Placeholder leftovers: TODO, TBD, XX%, [Company], lorem ipsum, 某某, 〇〇, an unfilled `[missing: …]` on stage | Real content, or an explicit question to the user | `placeholder` |
+| Placeholder leftovers: TODO, TBD, XX%, [Company], lorem ipsum, 某某, 〇〇, an unfilled `[missing: …]` on stage | Real content, or a question to the user with the candidates found in the material and their sources (SKILL.md, *Asking the Deck Maker*) | `placeholder` |
 
 ### Internal process leakage
 
