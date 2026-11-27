@@ -48,6 +48,7 @@ Loads `<deck.html>?still&p=1` at `1920×1080`, verifies `#stage` intrinsic dimen
 - **Broken images**: Checks every visible `<img>` inside `#stage` has `complete && naturalWidth > 0`.
 - **Stage containment**: Verifies visible text rectangles inside `#stage` remain within `1920×1080` logical bounds (`±1px` tolerance).
 - **Line-wrap guard**: Checks every visible element inside `#stage` that defines `data-expected-lines`, `data-lint-lines`, or contains `<br>` tags. Visual lines are clustered via `Range.getClientRects()` by vertical overlap so mixed CJK characters and large inline numbers are counted accurately. Fails if `actualLines > expectedLines`.
+- **Stage fit & controls**: Reopens the deck live at 1000×515, 1280×1000 and 420×800 (host panes like the Claude artifact viewer are rarely 16:9). Fails (`stage-fit`) if `#stage` leaves the viewport or is off-centre, and (`controls`) if ArrowRight or a click on the right of the viewport no longer advances a beat.
 
 Craft **warnings** (printed as `WARN`, fatal only with `--strict`):
 

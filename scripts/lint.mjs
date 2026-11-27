@@ -443,6 +443,66 @@ async function inspectActiveBeat(page) {
   });
 }
 
+// Viewports that are not 16:9: a host pane (Claude artifact viewer, iframe, preview) rarely is.
+const FIT_VIEWPORTS = [
+  [1000, 515],
+  [1280, 1000],
+  [420, 800],
+];
+
+/**
+ * Open the deck live (no ?still) at several non-16:9 sizes and check that #stage is fully visible
+ * and centred, and that the keyboard and click controls still advance beats. The per-beat pass runs
+ * at exactly 1920x1080, where a stage centred with `transform-origin: center` + bare `scale()` looks
+ * right; at any other size such a stage drifts right and down out of view, which is how decks
+ * opened inside Claude ended up skewed.
+ * @param {import('playwright').BrowserContext} context
+ * @param {string} input
+ * @param {number} total
+ */
+async function checkStageFit(context, input, total) {
+  const issues = [];
+  const url = resolveDeckUrl(input);
+  for (const [w, h] of FIT_VIEWPORTS) {
+    const page = await context.newPage();
+    try {
+      await page.setViewportSize({ width: w, height: h });
+      await page.goto(url, { waitUntil: 'domcontentloaded' });
+      await waitForDeckReady(page);
+      const r = await page.evaluate(() => {
+        const b = document.getElementById('stage').getBoundingClientRect();
+        return { l: b.left, t: b.top, r: b.right, b: b.bottom };
+      });
+      const fmt = `(${r.l.toFixed(0)}, ${r.t.toFixed(0)}, ${r.r.toFixed(0)}, ${r.b.toFixed(0)})`;
+      if (r.l < -1 || r.t < -1 || r.r > w + 1 || r.b > h + 1) {
+        issues.push({ type: 'stage-fit', message: `#stage leaves a ${w}x${h} viewport ${fmt}; fit it with an explicit translate + scale from transform-origin 0 0 (see stage-contract.md §1)` });
+        continue;
+      }
+      if (Math.abs(r.l - (w - r.r)) > 2 || Math.abs(r.t - (h - r.b)) > 2) {
+        issues.push({ type: 'stage-fit', message: `#stage is not centred in a ${w}x${h} viewport ${fmt}` });
+        continue;
+      }
+      if (total < 2 || w !== FIT_VIEWPORTS[0][0]) continue;
+      // Controls: ArrowRight and a click on the right of the viewport each advance one beat.
+      const before = await page.evaluate(() => window.__beatdeck.current());
+      await page.keyboard.press('ArrowRight');
+      const afterKey = await page.evaluate(() => window.__beatdeck.current());
+      if (afterKey !== before + 1) {
+        issues.push({ type: 'controls', message: `ArrowRight did not advance the deck at ${w}x${h} (beat ${before} -> ${afterKey})` });
+      }
+      await page.evaluate(() => window.__beatdeck.goTo(0));
+      await page.mouse.click(Math.round(w * 0.6), Math.round(h * 0.5));
+      const afterClick = await page.evaluate(() => window.__beatdeck.current());
+      if (afterClick !== 1) {
+        issues.push({ type: 'controls', message: `Clicking the right of the viewport did not advance the deck at ${w}x${h} (beat 0 -> ${afterClick})` });
+      }
+    } finally {
+      await page.close();
+    }
+  }
+  return issues;
+}
+
 async function main() {
   const { positional, flags } = parseCliArgs(process.argv.slice(2), new Set(['json', 'strict']));
   if (positional.length === 0) {
@@ -633,6 +693,10 @@ async function main() {
           type: 'exclamation',
           message: `${deckTally.exclaim} exclamation marks (limit ${exclaimLimit}); let the content carry the energy`,
         });
+      }
+
+      for (const issue of await checkStageFit(page.context(), input, total)) {
+        failures.push({ beat: 'deck', ...issue });
       }
 
       return { total, failures, warnings };

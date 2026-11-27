@@ -7,7 +7,8 @@ Every Beatdeck presentation implements a lightweight contract so headless lintin
 ## 1. Logical Stage (`#stage`)
 
 - Place all presentation visuals inside an element with `id="stage"` sized to **`1920px × 1080px`** logical coordinates.
-- Center `#stage` inside the viewport and aspect-fit scale it (`transform: scale(...)`) so the layout stays identical on any screen size while preserving `1920×1080` internal geometry.
+- Fit and centre `#stage` explicitly: `#viewport` is `position: fixed; inset: 0`, `#stage` is `position: absolute; left: 0; top: 0; transform-origin: 0 0`, and `fitStage()` sets `translate(offsetX, offsetY) scale(s)` from the viewport's own `clientWidth`/`clientHeight`, on load, on `resize`, and from a `ResizeObserver` on `#viewport`. This keeps the `1920×1080` geometry identical at any size.
+- Do **not** centre with grid/flex plus `transform-origin: center` and a bare `scale()`. That only lines up at exactly 1920×1080; in any other window, and inside host panes such as the Claude artifact viewer or an iframe, the stage drifts right and down out of view, so the deck opens skewed and its content can't be reached. `lint.mjs` checks the fit at 1000×515, 1280×1000 and 420×800 (`stage-fit`) and that ArrowRight and a click still advance beats (`controls`).
 - Elements from inactive beats must be hidden cleanly (`display: none`, `visibility: hidden`, or `opacity: 0`) so automated geometry checks only inspect the active beat.
 
 ---
@@ -105,10 +106,10 @@ To let headless Chromium verify layout integrity on every beat:
 ```html
 <style>
   html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; }
-  #viewport { position: relative; width: 100%; height: 100%; display: grid; place-items: center; }
+  #viewport { position: fixed; inset: 0; overflow: hidden; }
   #stage {
-    position: relative; width: 1920px; height: 1080px;
-    transform-origin: center center; overflow: hidden;
+    position: absolute; left: 0; top: 0; width: 1920px; height: 1080px;
+    transform-origin: 0 0; overflow: hidden;
   }
   body.still *, body.still *::before, body.still *::after {
     transition: none !important;
@@ -131,11 +132,16 @@ if (isStill) document.body.classList.add("still");
 if (isVideo) document.body.classList.add("video");
 if (isBare) document.body.classList.add("bare");
 
+// Centre explicitly from the top-left; never rely on transform-origin: center (see §1).
 function fitStage() {
-  const scale = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
-  stageEl.style.transform = `scale(${scale})`;
+  const vp = document.getElementById("viewport");
+  const vw = vp.clientWidth || window.innerWidth || 1920;
+  const vh = vp.clientHeight || window.innerHeight || 1080;
+  const s = Math.min(vw / 1920, vh / 1080);
+  stageEl.style.transform = `translate(${(vw - 1920 * s) / 2}px, ${(vh - 1080 * s) / 2}px) scale(${s})`;
 }
 window.addEventListener("resize", fitStage);
+if (window.ResizeObserver) new ResizeObserver(fitStage).observe(document.getElementById("viewport"));
 fitStage();
 
 // Intra-beat timer scheduler: compatible with ?still and record-video.mjs virtual clock.
