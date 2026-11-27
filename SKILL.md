@@ -12,7 +12,9 @@ A deck is a short directed film on one `1920×1080` stage. Every deck invents it
 ## Principles
 
 1. **One world, card-free composition.** Build one coherent spatial metaphor (optionally a `#world` canvas the camera pans across) instead of disconnected slide boxes. Reject the default AI slide shell (dot-kicker + header rule + corner crop marks + bordered card grids), dark-SaaS neon, purple-blue AI gradients, card-inside-card, 3-column icon grids, and emoji used as icons. Rotate among the five card-free archetypes: *clean canvas + single hero*, *full-bleed scene / cross-section*, *real product window + hairline callouts*, *raw physical artifact / print spread*, *asymmetric typographic stage*.
-2. **One idea, one visual change per beat.** Open on a concrete human scene or friction before metrics or architecture. Write for the audience and leave out internal repo names, file paths, and jargon they don't need.
+2. **One idea, one visual change per beat.** Open on a concrete human scene or friction before metrics or architecture. Write for the audience, never for the makers.
+   - Leave out internal process: revision or iteration counts (「調整了幾次」「第二版」), review rounds, which agents or tools built it, bug-fix tallies, resubmission notes (「補交」), commit hashes, file paths, ticket IDs, and internal jargon.
+   - Show the result in the audience's terms. Facts only the speaker needs go in the beat's `note`.
 3. **Direct inside the beat.** Sequence steps with `at(ms, fn, { liveOnly })`, carry persistent protagonists across beats, and pick one motion tier: `Measured`, `Choreographed`, or `Kinetic`. Every non-`liveOnly` step settles synchronously under `?still`, so snapshots, lint, and PDFs see the final frame.
 4. **Real material, never invented facts.** Use real numbers, quotes, screenshots, and captures. Mark missing facts explicitly instead of inventing placeholders.
 5. **No AI tells, visual or verbal.** AI-looking decks come from unexamined defaults:
@@ -43,14 +45,14 @@ Follow this order; each step gates the next.
 5. **Lint until clean.** Run `lint.mjs <deck.html> --strict`; use `--json` when parsing the output. Errors cover overflow, unexpected wraps, broken images, runtime errors, and contract violations. Craft warnings cover:
    - **Layout:** the card shell, nested cards, text collisions, repeated layouts, and leftover skeleton scenes.
    - **AI-tell visuals:** AI gradients, gradient text, frosted glass, text density, bullet stacks, and label headlines.
-   - **AI-tell wording,** checked on stage *and* in `say`: stock phrases, contrast frames, em dashes, exclamation marks, placeholders, narration that repeats the slide, and 簡體字, 大陸用語 and half-width punctuation in Chinese.
+   - **AI-tell wording,** checked on stage *and* in `say`: stock phrases, contrast frames, em dashes, exclamation marks, placeholders, internal process details, narration that repeats the slide, and 簡體字, 大陸用語 and half-width punctuation in Chinese.
 
    Fix them by rewriting, not by synonym-swapping. Mark a genuinely intentional case with `data-lint-allow="<type>"` on stage or `META.lintAllow` for narration.
 6. **Three-lens review.** Run `snapshot.mjs <deck.html>` and open `contact-sheet.png` and any doubtful `beat-NN.png`.
    - **Audience:** a cold read that also checks archetype variety.
    - **Speaker:** read the `say` lines aloud at 3.6 CJK chars/s or 2.5 Latin words/s, and toggle `C` to confirm the PiP corner stays clear.
    - **Fact & layout:** every number is sourced, and lint is clean.
-   - Then run the five-question human checklist in [references/ai-tells.md](references/ai-tells.md) §6 (swap, source, speaker, glance, claim). Lint cannot judge whether a deck says something specific.
+   - Then run the five-question human checklist in [references/ai-tells.md](references/ai-tells.md) §6 (swap, source, speaker, glance, claim, need-to-know). Lint cannot judge whether a deck says something specific.
 7. **Export** what was asked for (table below). See [references/export-and-recording.md](references/export-and-recording.md).
 
 ## Beat Data (single source of truth)

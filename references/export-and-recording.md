@@ -66,6 +66,7 @@ Craft **warnings** (printed as `WARN`, fatal only with `--strict`):
 | `label-headline` | The largest text on the beat is a topic label (Agenda, Overview, Thank you, Q&A, 議程, 謝謝聆聽…). |
 | `ai-phrase` | Stock LLM phrasing in stage text or `say` (English and Chinese lists in `scripts/lib/copy-rules.mjs`). |
 | `placeholder` | TODO, TBD, XX%, `[Company]`, lorem ipsum, John Doe, Acme, 某某, 〇〇. |
+| `internal-process` | Process bookkeeping: iteration/revision counts, review rounds, resubmission notes, sub-agents, bug-fix tallies, commit hashes, source file paths (「調整了 N 次」「第二版修正」「補交」「修了 N 處」). `note` is not checked. |
 | `read-aloud` | ≥ 70% of a beat's `say` 4-grams are printed on stage. |
 | `contrast-frame` | "Not X, but Y" / 「不是…而是…」 framing on 2+ beats (deck-level). |
 | `em-dash` / `exclamation` | More than one em dash per four beats, or one exclamation run per six beats (deck-level). |

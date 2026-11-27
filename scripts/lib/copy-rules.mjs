@@ -81,6 +81,28 @@ export const CONTRAST_FRAMES = [
   /與其說[^。！？]{1,24}不如說|与其说[^。！？]{1,24}不如说/,
 ];
 
+/**
+ * Internal process bookkeeping that belongs in commit logs or presenter notes, not on stage:
+ * revision/iteration counts, review rounds, resubmission notes, who/which agents built it,
+ * bug-fix tallies, commit hashes, source file paths.
+ */
+export const INTERNAL_PROCESS = [
+  [/\b(after|through|over|across|took|in) \d+ (rounds?|iterations?|revisions?|rewrites?|tweaks?|adjustments?|versions?|drafts?|passes)\b/i, 'N rounds/iterations'],
+  [/\b(round|iteration|revision|draft|pass) (\d+|one|two|three|four|five)\b/i, 'round N'],
+  [/\b(re-?submitted|resubmission|re-?submit)\b/i, 'resubmission'],
+  [/\bsub-?agents?\b/i, 'sub-agents'],
+  [/\b(fixed|resolved|closed) \d+ (bugs?|issues?|tickets?|places?)\b/i, 'fixed N bugs'],
+  [/\b(commit|PR|pull request|branch)\s*#?[0-9a-f]{3,}\b/i, 'commit/PR reference'],
+  [/\b(?=[0-9a-f]*\d)(?=[0-9a-f]*[a-f])[0-9a-f]{7,40}\b/, 'commit hash'],
+  [/(^|[\s(（])[\w.-]+\/[\w./-]+\.(m?js|ts|py|md|json|ya?ml|sh|css)\b|\b[\w-]+\.(m?js|ts|py|sh)\b/, 'source file path'],
+  [/(第\s*[一二三四五六七八九十\d]+\s*(輪|版|次|轮)|[一二三四五六七八九十兩两\d]+\s*(輪|轮|版|次))\s*(的)?\s*(調整|调整|修改|修正|優化|优化|迭代|審查|审查|改版|重做|試做|试做)/, '第 N 輪／N 次調整'],
+  [/(調整|调整|修改|修正|優化|优化|迭代|改版|重做|審查|审查)(了|過|过)?\s*[一二三四五六七八九十兩两\d]+\s*(次|輪|轮|版)/, '調整了 N 次'],
+  [/補交|补交|重新繳交|重新缴交/, '補交'],
+  [/子代理|AI\s*分身/, '子代理／AI 分身'],
+  [/依(照)?(老師|老师|助教|主管|評審|评审)(的)?(意見|意见|回饋|回馈|要求)/, '依老師意見修改'],
+  [/(修正|修好|修了|清掉|改掉)[^。！？\n]{0,8}\d+\s*(處|处|個|个|條|条)/, '修了 N 處'],
+];
+
 /** Placeholder text that should never reach an audience. */
 export const PLACEHOLDERS = [
   [/\blorem ipsum\b/i, 'lorem ipsum'],
@@ -151,6 +173,14 @@ export function checkText(text, { lang = '' } = {}) {
     if (re.test(text)) hits.push(label);
   }
   if (hits.length) out.push({ type: 'ai-phrase', message: `Stock AI phrasing: ${hits.map((h) => `"${h}"`).join(', ')}` });
+
+  const internal = INTERNAL_PROCESS.filter(([re]) => re.test(text)).map(([, l]) => l);
+  if (internal.length) {
+    out.push({
+      type: 'internal-process',
+      message: `Internal process detail the audience does not need: ${internal.join(', ')}; keep it in the beat's note or the changelog`,
+    });
+  }
 
   const ph = PLACEHOLDERS.filter(([re]) => re.test(text)).map(([, l]) => l);
   if (ph.length) out.push({ type: 'placeholder', message: `Placeholder text: ${ph.join(', ')}` });

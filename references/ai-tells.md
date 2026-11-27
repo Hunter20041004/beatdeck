@@ -1,6 +1,6 @@
 # AI Tells: What Makes a Deck Look and Sound Machine-Made
 
-Audiences now pattern-match polish to "an AI made this", and once they do, they stop trusting the content. The tells are not AI-specific sins. They are **unexamined defaults**: the choice a model makes when nobody made a choice. The cure is the same every time: every visual and verbal decision must trace back to *this* subject, *this* audience, and *this* speaker.
+Audiences now pattern-match polish to "an AI made this", and once they do, they stop trusting the content. The tells are not AI-specific sins. They are **unexamined defaults**: the choice a model makes when nobody made a choice. The cure is the same every time: every visual and verbal decision must trace back to *this* subject, *this* audience, and *this* speaker. That includes leaving out what only the makers care about (§2, *Internal process leakage*).
 
 Use this file at three moments:
 
@@ -43,6 +43,23 @@ A lint pass is necessary, not sufficient. No rule list can guarantee a deck "doe
 | Hedged, point-of-view-free claims ("can help", "may enable", "various benefits") | Commit to a claim the speaker can defend | review |
 | Summary slide that restates every previous beat | One synthesis beat that changes how the audience sees the opening scene | review |
 | Placeholder leftovers: TODO, TBD, XX%, [Company], lorem ipsum, 某某, 〇〇 | Real content, or an explicit question to the user | `placeholder` |
+
+### Internal process leakage
+
+AI drafting works from the project's logs, commit history, and decision records, so it narrates *how the work was made* instead of *what the audience gets*. Insiders care about process; the audience does not.
+
+| Leaks onto the stage | Keep it in |
+| :--- | :--- |
+| Revision and iteration counts: "after 4 iterations", 「調整了 5 次」「第二版」「經過三輪審查」 | changelog, beat `note` |
+| Who or what built it: "three sub-agents", 「子代理分工」「AI 分身」, internal role names | README / credits |
+| Bug-fix tallies: "fixed 95 issues", 「修了 95 處」 | changelog |
+| Submission bookkeeping: "resubmitted", 「補交」「第十一週補交版」「依老師意見修改」 | the submission form |
+| Repository internals: commit hashes, branch names, file paths (`src/game.js`), test file names, ticket/decision IDs | README |
+| Dates of internal fixes and who approved them | decision log |
+
+**What to show instead:** the result in the audience's terms. Not "after three rounds of tuning, chase speed went from 69 to 119", but "monsters now run faster than you walk, so you have to break line of sight". A process fact belongs on stage only when the process *is* the subject (a talk about how you work) or when the audience must act on it (e.g. CLI commands in a developer-tool deck). Then mark it with `data-lint-allow="internal-process"`.
+
+Lint type: `internal-process` (stage text and `say`; the presenter-only `note` field is exempt and is the right home for these facts).
 
 ---
 
@@ -124,6 +141,7 @@ Run this on the contact sheet (`snapshot.mjs`) and the exported script (`script-
 3. **Speaker test:** read every `say` aloud. Would *this* speaker say it, in this room? Cut any sentence that sounds like a press release.
 4. **Glance test:** look at the contact sheet for five seconds. Do beats share one visual system *and* differ in composition? Any beat that looks like a template default?
 5. **Claim test:** read only the headlines in order. Do they tell the story as claims, without the body text?
+6. **Need-to-know test:** for every fact on stage, ask whether this audience would understand or act differently without it. Revision history, review rounds, tooling, and submission notes almost never pass.
 
 ---
 

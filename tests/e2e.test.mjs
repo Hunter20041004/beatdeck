@@ -148,7 +148,7 @@ function buildAiTellFixtureHtml() {
       <div class="grad"></div>
       <h1>議程</h1>
       <div class="glass" style="left:100px">A</div><div class="glass" style="left:600px">B</div>
-      <p class="copy">在當今數位時代，我們以AI賦能團隊,打造極致體驗。这个視頻很棒——真的</p>
+      <p class="copy">在當今數位時代，我們以AI賦能團隊,打造極致體驗。这个視頻很棒——真的。經過三輪審查與 5 次調整。</p>
     </div>
     <div class="beat">
       <ul>${words}</ul>
@@ -590,7 +590,7 @@ async function runTests() {
     for (const t of [
       'ai-gradient', 'gradient-text', 'glassmorphism', 'label-headline', 'ai-phrase', 'zh-punct',
       'zh-variant', 'zh-term', 'contrast-frame', 'exclamation', 'em-dash', 'bullet-stack',
-      'text-density', 'read-aloud', 'placeholder',
+      'text-density', 'read-aloud', 'placeholder', 'internal-process',
     ]) {
       assert.ok(aiTypes.has(t), `expected ${t} warning, got ${[...aiTypes].join(', ')}`);
     }
