@@ -4,9 +4,9 @@ Beatdeck treats a presentation as a short directed film on a fixed `1920x1080` c
 
 ---
 
-## 0. The Heart: Promise and Protagonist
+## 0. The Heart: Promise, Protagonist and Spine
 
-Before any visual decision, find what the subject *is*. A deck that tours features in order is a manual; a deck built around its heart is a story.
+Before any visual decision, find what the subject *is* (§0.1–0.2) and how the talk will argue it (§0.3). A deck that tours features in order is a manual; a deck built around its heart, on a spine the deck maker agreed to, is a story.
 
 ### 0.1 Find it in the subject's own words
 - **Read how the subject describes itself:** the README's first lines, the product or design spec's purpose, the pitch, the brand guide, the about page, the paper's abstract. Do not start from the feature list.
@@ -29,6 +29,71 @@ Before any visual decision, find what the subject *is*. A deck that tours featur
 - **The world serves it.** The visual direction is the place the protagonist lives in, not a theme next to it.
 - **Cover test:** hide the protagonist in every beat. If the deck still makes sense, it is a feature tour; rebuild the outline around the protagonist.
 
+### 0.3 The spine: confirm the logic before the look
+The promise and the protagonist say what the deck is about. The **spine** says how the talk gets this audience from where they are to that promise: which sections, in what order, and why each one follows the last. It is the deck maker's argument, so it is confirmed with them before any direction, asset or beat. Beats, visuals and motion can polish a sound spine; none of them can fix a wrong one, and after authoring a wrong order costs a rebuild.
+
+**Write it in five parts.**
+1. **From → to.** What this audience believes, knows or feels walking in, in their words, and what they should think or do walking out. The talk is the distance between the two. If *to* is "know our features", there is no talk yet: ask what the audience should decide.
+2. **Shape.** Choose the arc from what the talk must do, then adapt it:
+
+| The talk must… | Shape | Sections run |
+| :--- | :--- | :--- |
+| get a yes (pitch, proposal, funding, adoption) | situation → complication → resolution | a person's real situation → what breaks for them → the protagonist resolving it → proof → the ask |
+| report a finding (research, thesis, review) | question → answer | the question and why it matters → how we looked → the finding → what it changes |
+| show a product working (demo) | task → done | someone's task → the protagonist doing it → what changed for them → how to start |
+| teach a skill (lecture, workshop) | can't → can | what you will be able to do → steps that each build on the last → try it |
+| tell a story (brand, documentary, game) | world → turn → new world | the world → what disrupts it → the struggle → the turn → the world after |
+| settle a decision (internal) | decision → recommendation | the decision needed → the options → what decides it → the recommendation and its cost |
+
+3. **Sections.** Three to six, each with a `chapter` name, **one claim** (a full sentence the audience would agree with after the section; read in order, the claims alone make the argument), what the protagonist does in it, and **why it follows the previous section**, named as a relation:
+
+| Relation | It means | The beat change into it (§2.7) |
+| :--- | :--- | :--- |
+| **but** | a turn: the complication, the obstacle, the surprise | a hard `cut`, or before/after |
+| **so** | a consequence: what follows from the last section | the protagonist acts; the same object, next state |
+| **because** | a reason: why the last section is true | a closer look (`camera`, `zoom`) |
+| **for example** | proof: the last claim, shown on a real case | a closer look, or the world's material |
+| **compared with** | a contrast: another option, the old way | `match` the shared part |
+| **then** | time moves (stories and demos only) | the world's clock |
+
+   The first section's *why* is why the audience starts there (it is where they are now). A section that follows only because of "and also", "next" or 「另外」「接著」 is a list item: merge it, cut it, or find its real relation.
+4. **Time.** A rough share per section. The turn and the proof get the most; what the audience already knows gets the least.
+5. **Gaps.** The facts each section needs that the material does not give. They go into the same message.
+
+**Check it before you show it.**
+- **Claim test:** the section claims alone, read in order, make the argument.
+- **Why test:** every *why* names a relation from the table; nothing joins with "and also".
+- **Start test:** the first section starts where the audience is: their situation, a human scene, a question they have. Not the team, the history or the agenda.
+- **End test:** the last section lands the promise kept, or the one thing to do next. Not a recap, not "thank you".
+- **Protagonist test:** every section says what the protagonist does in it. A section without it is either supporting cast that belongs inside another section, or a sign the protagonist is wrong.
+- **Need-to-know test:** no section about how it was made, unless the audience is grading the making.
+
+**Broken spines and what to do.**
+
+| Spine | Why it fails | Instead |
+| :--- | :--- | :--- |
+| Feature tour: feature 1, feature 2, feature 3 | Every *why* is "and also"; nothing builds | Order the features by the task they serve, as the protagonist doing it |
+| Making-of: how we started, what we tried, what we built | Process is the makers' story, not the audience's | Start from the audience's situation; process goes in `note` |
+| Answer first: the solution before anyone feels the problem | The resolution has no complication to resolve | Let the audience feel what breaks before the protagonist arrives |
+| Three pillars in any order | No reason for the order; the audience cannot predict or remember it | Find the relation; if there is none, it is one section |
+| Data dump: chart after chart | No question, so no finding | Open on the question the data answers |
+| Ends on a recap or Q&A | The last thing heard is a repeat | End on the promise kept, or the ask |
+
+**Confirm it with the deck maker.** Show the spine as one short block, for example:
+
+> **Promise:** a freshman builds a clash-free timetable in five minutes, because the planner re-plans for them.
+> **Protagonist:** the planner that re-plans the week. **Shape:** situation → complication → resolution.
+> **From → to:** "course selection is a lottery I lose" → "I'll try it this semester."
+> 1. **01 · Friday night** (starts where they are, ~15%): course selection week costs freshmen a whole night.
+> 2. **02 · The clash** (*but*, ~20%): one full section breaks the whole plan, and nobody shows the alternatives.
+> 3. **03 · It re-plans** (*so*, ~35%): the planner moves the week around the full section and keeps the rest.
+> 4. **04 · Real week** (*for example*, ~20%): last semester's actual timetable, rebuilt in four minutes.
+> 5. **05 · Try it** (*so*, ~10%): open the link before Monday's selection round.
+
+Then ask the questions only the deck maker can answer: does it start where *your* audience is, is this the order you would argue it in, and is anything missing that they must hear, or anything they would skip? Fold the answer in, then record the spine in `META.spine` (§6) so it travels with the deck: `script-export.mjs` prints it above the script with each section's time, and lint `spine` checks that the beats follow it.
+
+**The spine drives what comes after.** The relations at section boundaries pick the designed beat changes (the table above, §2.7). The turn (*but*) and the proof (*for example*) are where the signature moments go (§2.5). The visual directions (§1) are different places for the same spine, never a different argument.
+
 ---
 
 ## 1. Visual Direction Proposals & Alignment
@@ -46,6 +111,7 @@ Each proposal must inhabit a different physical or conceptual world—never thre
 7. **Copy Voice**: Who is speaking, in what register (plain-spoken engineer, editorial narrator, founder pitching), and a short list of words this speaker would never say. Draw the banned list from [ai-tells.md](ai-tells.md) plus anything the user's industry overuses.
 
 ### Alignment Protocol
+- Propose directions only for a spine the deck maker has confirmed (§0.3). If they have not answered yet, say which spine the directions assume.
 - Present the 2–3 directions side by side, highlight which one you recommend, and ask the user **once** to pick, combine, or tweak before you start crafting hero assets.
 - Skip asking only if the user explicitly tells you to decide for them or when running in a non-interactive headless pipeline—in that case, state the chosen direction, archetype, and register upfront in your plan/summary before writing HTML.
 - If the user may be away for hours (an async project thread, a queued task), ask once and keep working on the direction you recommend while you wait; switch if their answer differs. A stalled thread costs more than a redone hero asset.
@@ -298,11 +364,35 @@ All helpers arrive in `CHOREO[id](scene, helpers)`. Every one is `?still`-safe (
 
 A **beat** is the smallest atomic unit of meaning: **one idea and one visual change**.
 
+- **Beats live inside the spine** (§0.3). Each beat's `chapter` is one of `META.spine.sections`, chapters run in spine order and never come back, and each beat moves its section's claim one step. A beat that fits no section is either a missing section to confirm with the deck maker or a beat to cut.
 - **Start with a human scene**: Open Beat 1 with a recognizable person, moment, friction, or physical stake before showing KPIs, benchmarks, or architecture diagrams.
 - **One change per beat**: Do not introduce a new chart, a headline shift, and three callouts simultaneously. Let each beat advance either the argument or the camera focus cleanly.
 - **Audience-first vocabulary**: Omit internal repository names, implementation scaffolding, or engineering jargon unless the audience actually cares about those internals.
 - **Speakable `say` lines**: Write `say` as natural spoken prose—never copy-pasted slide bullets. Aim for ~15–30 English words or ~30–60 CJK characters per beat so narration paces smoothly.
 - **Use `pdfSkip: true` thoughtfully**: If two rapid beats exist purely for live-talk pacing or progressive reveal (e.g., step 1 highlight -> step 2 highlight on the same diagram), mark the intermediate state `pdfSkip: true` so static slide and storyboard PDFs stay uncluttered.
+
+Record the confirmed spine next to the beats, in `META`:
+
+```js
+const META = {
+  // …title, lang, speechRate…
+  spine: {
+    promise: "A freshman builds a clash-free timetable in five minutes, because the planner re-plans for them.",
+    protagonist: "the planner that re-plans the week",
+    shape: "situation → complication → resolution",
+    from: "Course selection is a lottery I lose.",
+    to: "I'll try it this semester.",
+    sections: [
+      { chapter: "01 · Friday night", claim: "Course selection week costs freshmen a whole night.", why: "starts where they are" },
+      { chapter: "02 · The clash", claim: "One full section breaks the whole plan.", why: "but" },
+      { chapter: "03 · It re-plans", claim: "The planner moves the week around it and keeps the rest.", why: "so" },
+      // …
+    ],
+  },
+};
+```
+
+`why` is the relation to the previous section (§0.3), optionally followed by a few words (`"but: the plan breaks on one class"`). Lint `spine` (decks of 6+ beats) warns when the spine is missing or has no `promise` or `to`, when a section lacks a claim or a `why`, when a `why` is only "and also" / 「另外」, and when beats use a chapter the spine does not have, skip a section, or come back to an earlier one.
 
 ---
 
@@ -327,7 +417,7 @@ const BEATS = [
 
 One `BEATS` array automatically powers:
 1. **Live Talk**: Current chapter HUD and `N` speaker-notes drawer.
-2. **Speaker Script (`講稿` / `script.md`)**: Timestamped Markdown table with per-speaker totals via `scripts/script-export.mjs`.
+2. **Speaker Script (`講稿` / `script.md`)**: The story spine with each section's time (from `META.spine`), then a timestamped Markdown table with per-speaker totals via `scripts/script-export.mjs`.
 3. **PDF Handouts**: Clean `1920x1080` slides or `2`/`3`-column storyboard sheets with captions via `scripts/pdf-export.mjs`.
 4. **Timed Video**: Auto-computed beat transitions and `#subtitle` updates via `scripts/record-video.mjs`.
 

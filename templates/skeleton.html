@@ -129,7 +129,10 @@
 
   // ============ CONTENT: single source of truth ============
   // lintAllow: narration-wide lint exemptions, e.g. ["contrast-frame"]; see references/ai-tells.md §7.
-  const META = { title: "{{TITLE}}", subtitle: "", lang: "{{LANG}}", width: 1920, height: 1080, speechRate: 3.6, lintAllow: [] };
+  // spine: the structure confirmed with the deck maker before building (craft-and-direction §0.3).
+  // Each section: { chapter, claim, why }; every beat's `chapter` is one of them, in this order.
+  const META = { title: "{{TITLE}}", subtitle: "", lang: "{{LANG}}", width: 1920, height: 1080, speechRate: 3.6, lintAllow: [],
+    spine: { promise: "", protagonist: "", shape: "", from: "", to: "", sections: [] } };
 
   // One idea + one visual change per beat. `cam` positions the #world camera (logical px + zoom).
   const BEATS = [

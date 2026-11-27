@@ -964,6 +964,51 @@ async function runTests() {
     assert.ok(!w.some((x) => x.type === 'frame-crossing'), `a card entering through the screen (clipped by it) must pass (${JSON.stringify(w.filter((x) => x.type === 'frame-crossing'))})`);
     console.log('   v1.9 checks passed.');
 
+    // 17) v1.10: the story spine is confirmed, recorded in META.spine, and the beats follow it
+    console.log('17) Checking v1.10 story spine (lint + script)...');
+    const spineDeck = (name, spine, chapters) => {
+      const file = path.join(tmpDir, 'v110', name, 'deck.html');
+      assert.equal(runNode('scripts/new-deck.mjs', [file, '--ids', 'a,b,c,d,e,f', '--lang', 'zh-Hant']).status, 0);
+      let src = fs.readFileSync(file, 'utf8');
+      if (spine) src = src.replace('spine: { promise: "", protagonist: "", shape: "", from: "", to: "", sections: [] }', `spine: ${JSON.stringify(spine)}`);
+      ['a', 'b', 'c', 'd', 'e', 'f'].forEach((id, k) => {
+        src = src.replace(new RegExp(`(\\{ id: "${id}", chapter: )"[^"]*"`), `$1${JSON.stringify(chapters[k] ?? '')}`);
+      });
+      fs.writeFileSync(file, src, 'utf8');
+      return file;
+    };
+    const spineWarn = (file) => JSON.parse(runNode('scripts/lint.mjs', [file, '--json', '--motion=false']).stdout).warnings.filter((x) => x.type === 'spine');
+    const goodSpine = {
+      promise: '新生五分鐘排出不衝堂的課表，因為排課助手會幫他重排。', protagonist: '會重排一週的排課助手', shape: '情境 → 衝突 → 解決',
+      from: '選課是我抽不到的樂透', to: '這學期試試看',
+      sections: [
+        { chapter: '01 · 週五晚上', claim: '選課週讓新生熬掉一整晚。', why: '從他們現在的處境開始' },
+        { chapter: '02 · 衝堂', claim: '一門課額滿，整份課表就垮了。', why: 'but：計畫在一門課上斷掉' },
+        { chapter: '03 · 重排', claim: '助手繞過額滿的課，保留其他安排。', why: 'so' },
+      ],
+    };
+    const good = ['01 · 週五晚上', '01 · 週五晚上', '02 · 衝堂', '', '03 · 重排', '03 · 重排'];
+    let sw = spineWarn(spineDeck('none', null, good));
+    assert.ok(sw.length === 1 && /no META\.spine/.test(sw[0].message), `a 6-beat deck without a spine must be asked for one (${JSON.stringify(sw)})`);
+    const goodFile = spineDeck('good', goodSpine, good);
+    sw = spineWarn(goodFile);
+    assert.deepEqual(sw, [], 'a complete spine that the beats follow must pass');
+    const listy = JSON.parse(JSON.stringify(goodSpine));
+    listy.sections[2].why = '另外';
+    delete listy.to;
+    sw = spineWarn(spineDeck('listy', listy, good));
+    assert.ok(sw.length === 1 && /come next/.test(sw[0].message) && /no to/.test(sw[0].message), `an "and also" section and a missing "to" must be flagged (${JSON.stringify(sw)})`);
+    sw = spineWarn(spineDeck('stray', goodSpine, ['01 · 週五晚上', '02 · 衝堂', '01 · 週五晚上', '04 · 功能', '03 · 重排', '03 · 重排']));
+    assert.ok(sw.length === 1 && /returns to "01/.test(sw[0].message) && /"04 · 功能"/.test(sw[0].message), `beats that stray from or go back in the spine must be flagged (${JSON.stringify(sw)})`);
+    sw = spineWarn(spineDeck('skipped', goodSpine, ['01 · 週五晚上', '01 · 週五晚上', '01 · 週五晚上', '03 · 重排', '03 · 重排', '03 · 重排']));
+    assert.ok(sw.length === 1 && /no beat belongs to "02/.test(sw[0].message), `a spine section with no beats must be flagged (${JSON.stringify(sw)})`);
+    const spineScript = runNode('scripts/script-export.mjs', [goodFile]);
+    assert.equal(spineScript.status, 0, spineScript.stderr);
+    assert.match(spineScript.stdout, /## Story Spine/);
+    assert.match(spineScript.stdout, /\| 02 · 衝堂 \| but：計畫在一門課上斷掉 \| 一門課額滿，整份課表就垮了。 \| 2 \|/, 'the script must print each section with its beat count (a chapterless beat continues the section)');
+    assert.ok(spineScript.stdout.indexOf('## Story Spine') < spineScript.stdout.indexOf('## Script'), 'the spine comes before the script');
+    console.log('   v1.10 checks passed.');
+
     console.log('ALL E2E TESTS PASSED');
   } finally {
     fs.rmSync(tmpDir, { recursive: true, force: true });

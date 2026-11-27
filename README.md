@@ -15,6 +15,15 @@ An open-source Agent Skill and headless Chromium toolkit for crafting film-like,
 | **Single Source of Truth** | Separate speaker doc & slides drift quickly | Video-only output; no live talk mode | One HTML drives Live Talk, Notes, Script, PDF, Share HTML & MP4 |
 | **Dependencies** | Office / browser SaaS | Node + bundler + React ecosystem | Plain HTML/CSS/JS + Playwright Chromium (`ffmpeg` optional for MP4) |
 
+### What's New in v1.10: Confirm the Spine Before the Look
+
+The outline check (v1.8) showed the deck maker a list of beats, which is the wrong altitude for the question that matters most: is this the right argument, in the right order? A sound structure survives any visual world; a wrong one cannot be saved by beats or motion. v1.10 makes the structure its own step:
+
+- **Workflow step 2: confirm the spine** (craft-and-direction §0.3). Before any look, Claude shows the deck maker one short block: the promise and the protagonist, the audience **from → to** (what they believe walking in, what they should think or do walking out), the shape (situation → complication → resolution, question → answer, task → done…), and three to six sections, each with one claim, what the protagonist does there, a share of the time, and **why it follows the previous section** as a named relation (*but*, *so*, *because*, *for example*, *compared with*, *then*). "And also" is not a relation; it is how a feature tour reads. Claude asks whether it starts where the audience is, whether this is the order the deck maker would argue it in, and what is missing or skippable.
+- **The spine drives what follows.** The visual directions (now step 3) are different places for the same argument; the relations at section boundaries pick the designed beat changes (*but* → a hard cut, *because* → a closer look, *so* → the protagonist acts); the turn and the proof get the signature moments. The beat outline (step 4) is grouped by section, and a beat that fits no section is a question or a cut.
+- **`META.spine`** records the agreed structure in the deck. `script-export.mjs` prints it above the script with each section's beats, time and share, so the speaker rehearses the argument and sees where the time goes.
+- **Lint `spine`** (6+ beats): warns when the spine is missing, has no promise or *to*, a section has no claim or *why*, a *why* is only "and also" / 「另外」, or the beats use a chapter the spine lacks, skip a section, or come back to an earlier one.
+
 ### What's New in v1.9: Heart First, Changes That Mean Something, a Physical Stage
 
 A second look at a v1.8 deck showed three gaps that were ideas missing from the skill, not rules:

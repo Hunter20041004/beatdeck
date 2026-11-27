@@ -1,4 +1,5 @@
 import { parseCliArgs, resolveDeckUrl, variableClockInitScript, waitForDeckReady, withPage } from './lib/browser.mjs';
+import { checkSpine } from './lib/spine.mjs';
 import {
   checkText,
   countContrastFrames,
@@ -942,6 +943,7 @@ async function main() {
           beats: api.list(),
           lang: meta.lang || document.documentElement.lang || '',
           lintAllow: Array.isArray(meta.lintAllow) ? meta.lintAllow : [],
+          spine: meta.spine || null,
         };
       });
 
@@ -1095,6 +1097,15 @@ async function main() {
           type: 'exclamation',
           message: `${deckTally.exclaim} exclamation marks (limit ${exclaimLimit}); let the content carry the energy`,
         });
+      }
+
+      // The story spine (craft-and-direction §0.3): the structure the deck maker confirmed, and the
+      // beats following it. Short decks (under six beats) rarely have sections.
+      if (total >= 6 && !sayAllowed('spine')) {
+        const problems = checkSpine(apiInfo.spine, apiInfo.beats);
+        if (problems.length) {
+          warnings.push({ beat: 'deck', type: 'spine', message: problems.join('. ') });
+        }
       }
 
       for (const issue of await checkStageFit(page.context(), input, total)) {

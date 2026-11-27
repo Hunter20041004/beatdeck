@@ -4,9 +4,9 @@ Audiences now pattern-match polish to "an AI made this", and once they do, they 
 
 Use this file at three moments:
 
-1. **Direction (workflow step 2):** decide the copy voice alongside the visual world. Who is speaking, in what register, and which words this speaker would never say.
-2. **Authoring (step 5):** write against the lists below from the first draft. Rewriting AI tone afterwards is slower than not writing it.
-3. **Verification (steps 6–7):** `lint.mjs --strict` catches the mechanical tells (the **Lint** column). The rest need the human checklist in §6, which is why the contact-sheet review is mandatory.
+1. **Direction (workflow step 3):** decide the copy voice alongside the visual world. Who is speaking, in what register, and which words this speaker would never say.
+2. **Authoring (step 6):** write against the lists below from the first draft. Rewriting AI tone afterwards is slower than not writing it.
+3. **Verification (steps 7–8):** `lint.mjs --strict` catches the mechanical tells (the **Lint** column). The rest need the human checklist in §6, which is why the contact-sheet review is mandatory.
 
 A lint pass is necessary, not sufficient. No rule list can guarantee a deck "doesn't feel AI". A deck can avoid every listed phrase and still say nothing. Treat §6 as the real gate.
 
@@ -25,7 +25,7 @@ A lint pass is necessary, not sufficient. No rule list can guarantee a deck "doe
 | Text colliding, orphaned CJK characters, overflow | Generated in one pass without looking | Lock breaks with `<br>` + `data-expected-lines`; snapshot and look | `text-collision`, `line-wrap`, `overflow` |
 | Cream background + italic serif flourish + colored bar beside every text box | The current "tasteful" AI slide default | Make the accent mean something (one highlight per beat, tied to the claim) | review |
 | Generic 3D blobs, isometric people, glossy stock illustrations | Interchangeable across any topic | Real captures (Route A) or a crafted hero asset that clears the 3-layer fidelity bar (Route B) | review (hero gate) |
-| Icon style or background treatment drifting from beat to beat | Each slide generated in isolation | One visual system, decided in step 2, applied everywhere | review (contact sheet) |
+| Icon style or background treatment drifting from beat to beat | Each slide generated in isolation | One visual system, decided in step 3, applied everywhere | review (contact sheet) |
 | Decorative fake dashboards: meaningless progress bars, KPIs, sparklines | Looks "data-driven" without data | Show real numbers or nothing | review (fact lens) |
 | Everything centered and symmetric, identical rhythm on every beat | No hierarchy decision was made | Asymmetry, scale contrast, intentional empty space | review (contact sheet) |
 
@@ -55,6 +55,7 @@ Motion gives a deck away faster than any colour. Today the usual failure is not 
 | Tell | Do instead | Lint |
 | :--- | :--- | :--- |
 | Agenda slide at the start, "Thank you / Questions?" at the end | Open on a human scene; close on the one action or sentence you want remembered | `label-headline` |
+| Sections that follow only because they come next: feature 1, feature 2, feature 3; "another thing" / 「另外」「接著」 | A spine where each section says why it follows the last (*but*, *so*, *because*, *for example*), confirmed with the deck maker (craft-and-direction §0.3) | `spine` |
 | Narration that reads the slide aloud | Stage shows the evidence; `say` carries the argument | `read-aloud` |
 | Everything in threes: three pillars, three benefits, three adjectives | Use the real count. Two is fine, five is fine | review |
 | Generic persona ("Meet Sarah, a busy marketing manager…") | A real user, a real quote, or a specific, verifiable situation | `placeholder` (John Doe, Acme) / review |
@@ -167,7 +168,7 @@ Run this on the contact sheet (`snapshot.mjs`), the motion filmstrip (`filmstrip
 2. **Source test:** point at every number. Can you name where it came from? If not, remove it or mark it `[missing]` and ask.
 3. **Speaker test:** read every `say` aloud. Would *this* speaker say it, in this room? Cut any sentence that sounds like a press release.
 4. **Glance test:** look at the contact sheet for five seconds. Do beats share one visual system *and* differ in composition? Any beat that looks like a template default?
-5. **Claim test:** read only the headlines in order. Do they tell the story as claims, without the body text?
+5. **Claim test:** read only the `META.spine` claims in order, then only the headlines. Each reading must make the argument the deck maker agreed to as claims, without the body text, start where the audience is and end on the promise kept or the ask. A section that joins with "and also" is a list item (craft-and-direction §0.3).
 6. **Motion test:** read `filmstrip.png` row by row. Does each motion help the audience read the beat in the right order, and would the beat be worse without it? Are there two or three moments where the content itself moves, and are they where the story turns? Does each beat change say how the two beats relate, without one effect repeating into a pattern? Does anything pass through a phone's bezel, a page's edge or another object mid-motion?
 7. **Need-to-know test:** for every fact on stage, ask whether this audience would understand or act differently without it. Revision history, review rounds, tooling, and submission notes almost never pass.
 
