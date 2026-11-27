@@ -65,22 +65,20 @@
   #viewport {
     position: fixed;
     inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
     background: radial-gradient(circle at 50% 42%, #1B1F29 0%, #0D0F14 100%);
     overflow: hidden;
   }
 
   #stage {
-    position: relative;
+    position: absolute;
+    left: 0;
+    top: 0;
     width: 1920px;
     height: 1080px;
-    flex-shrink: 0;
     overflow: hidden;
     background: var(--ground);
     box-shadow: 0 32px 100px rgba(0, 0, 0, 0.62);
-    transform-origin: center center;
+    transform-origin: 0 0;
   }
 
   /* Continuous Risograph & Architectural Drafting Table World */
@@ -3416,10 +3414,11 @@
   }
 
   function fitStage() {
-    const vw = window.innerWidth || 1920;
-    const vh = window.innerHeight || 1080;
+    const vp = document.getElementById("viewport");
+    const vw = (vp && vp.clientWidth) || window.innerWidth || 1920;
+    const vh = (vp && vp.clientHeight) || window.innerHeight || 1080;
     const scale = Math.min(vw / META.width, vh / META.height);
-    stage.style.transform = `scale(${scale})`;
+    stage.style.transform = `translate(${(vw - META.width * scale) / 2}px, ${(vh - META.height * scale) / 2}px) scale(${scale})`;
   }
 
   function renderBeat(idx) {
@@ -3560,6 +3559,7 @@
   }
 
   window.addEventListener("resize", fitStage);
+  if (window.ResizeObserver) new ResizeObserver(() => fitStage()).observe(document.getElementById("viewport"));
 
   async function init() {
     fitStage();

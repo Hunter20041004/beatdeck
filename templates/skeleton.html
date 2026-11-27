@@ -29,10 +29,10 @@
 
   /* ============ RUNTIME: stage frame & modes (keep) ============ */
   html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #000; }
-  #viewport { position: relative; width: 100%; height: 100%; display: grid; place-items: center; }
+  #viewport { position: fixed; inset: 0; overflow: hidden; }
   #stage {
-    position: relative; width: 1920px; height: 1080px; flex: none;
-    transform-origin: center center; overflow: hidden;
+    position: absolute; left: 0; top: 0; width: 1920px; height: 1080px;
+    transform-origin: 0 0; overflow: hidden;
     background: var(--ground); color: var(--ink); font-family: var(--font-body);
   }
   #world {
@@ -228,10 +228,16 @@
     return Math.max(0, Math.min(BEATS.length - 1, n));
   }
 
+  // Fit the 1920x1080 stage into the visible viewport and centre it explicitly, so the result
+  // never depends on how a host page (iframe, artifact wrapper, preview pane) sizes <body>.
   function fitStage() {
-    const s = Math.min((window.innerWidth || 1920) / 1920, (window.innerHeight || 1080) / 1080);
-    stage.style.transform = `scale(${s})`;
+    const vp = document.getElementById("viewport");
+    const vw = (vp && vp.clientWidth) || window.innerWidth || 1920;
+    const vh = (vp && vp.clientHeight) || window.innerHeight || 1080;
+    const s = Math.min(vw / 1920, vh / 1080);
+    stage.style.transform = `translate(${(vw - 1920 * s) / 2}px, ${(vh - 1080 * s) / 2}px) scale(${s})`;
   }
+  if (window.ResizeObserver) new ResizeObserver(() => fitStage()).observe(document.getElementById("viewport"));
 
   function setCamera(cam) {
     const c = cam || { x: 0, y: 0, scale: 1 };

@@ -3,8 +3,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { execFileSync, spawnSync } from 'node:child_process';
-import { fileURLToPath } from 'node:url';
-import { getBrowserExecutablePath, parseCliArgs } from '../scripts/lib/browser.mjs';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import { getBrowserExecutablePath, launchBrowser, parseCliArgs } from '../scripts/lib/browser.mjs';
 import { isSloganHeadline } from '../scripts/lib/copy-rules.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -613,6 +613,30 @@ async function runTests() {
     const demoStrict = runNode('scripts/lint.mjs', [DEMO_DECK, '--strict']);
     assert.equal(demoStrict.status, 0, `demo deck must pass --strict:\n${demoStrict.stderr}`);
     console.log('   AI-tell lint tests passed.');
+
+    // 11) Stage fitting: centred and fully visible at any viewport size, not only 1920x1080
+    console.log('11) Checking stage fit at several viewport sizes...');
+    const fitBrowser = await launchBrowser();
+    try {
+      for (const file of [DEMO_DECK, skelPath]) {
+        for (const [w, h] of [[1000, 515], [1280, 1000], [420, 800]]) {
+          const page = await fitBrowser.newPage({ viewport: { width: w, height: h } });
+          await page.goto(pathToFileURL(file).href);
+          await page.waitForFunction(() => document.body.dataset.ready === '1');
+          const r = await page.evaluate(() => {
+            const b = document.getElementById('stage').getBoundingClientRect();
+            return { l: b.left, t: b.top, r: b.right, b: b.bottom };
+          });
+          await page.close();
+          const where = `${path.basename(path.dirname(file))}/${path.basename(file)} @ ${w}x${h}: ${JSON.stringify(r)}`;
+          assert.ok(r.l >= -1 && r.t >= -1 && r.r <= w + 1 && r.b <= h + 1, `stage leaves the viewport ${where}`);
+          assert.ok(Math.abs(r.l - (w - r.r)) <= 2 && Math.abs(r.t - (h - r.b)) <= 2, `stage not centred ${where}`);
+        }
+      }
+    } finally {
+      await fitBrowser.close();
+    }
+    console.log('   Stage fit checks passed.');
 
     console.log('ALL E2E TESTS PASSED');
   } finally {
