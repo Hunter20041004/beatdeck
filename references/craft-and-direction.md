@@ -6,7 +6,7 @@ Beatdeck treats a presentation as a short directed film on a fixed `1920x1080` c
 
 ## 1. Visual Direction Proposals & Alignment
 
-Never jump straight into writing `BEATS` or CSS with a single default aesthetic. Before crafting assets or scripting beats, synthesize the user's subject, audience, and tone, then propose **2–3 genuinely distinct visual world directions** plus a recommended **Motion Intensity Tier**.
+Never jump straight into writing `BEATS` or CSS with a single default aesthetic. Before crafting assets or scripting beats, synthesize the user's subject, audience, and tone, then propose **2–3 genuinely distinct visual world directions**, each with its motion register (§2).
 
 ### How to Craft Non-Generic Proposals
 Each proposal must inhabit a different physical or conceptual world—never three color swaps of the same boxed layout. Specify these concrete elements for every option:
@@ -15,12 +15,13 @@ Each proposal must inhabit a different physical or conceptual world—never thre
 3. **Typography Voice**: Display/serif/sans/mono pairing tuned to the subject (with realistic CJK/Latin system fallbacks for offline headless rendering).
 4. **Visual Signature**: One recurring structural motif or camera move that belongs uniquely to this topic (e.g., a vertical day/night split line, a continuous ledger spine, a zooming microscope reticle).
 5. **Primary Card-Free Archetype**: Which structural composition archetype(s) from Section 3 anchor the deck without falling back on boxed cards.
-6. **Motion Register**: How this deck moves (see §2): the register for this kind of presentation, the default entrance and beat change, and the one or two signature moments (which beats, which gesture, why there).
+6. **Motion Register**: How this deck moves (see §2): the register for this kind of presentation, the default entrance and beat change, and the two or three signature moments (which beats, which gesture, why there; §2.5).
 7. **Copy Voice**: Who is speaking, in what register (plain-spoken engineer, editorial narrator, founder pitching), and a short list of words this speaker would never say. Draw the banned list from [ai-tells.md](ai-tells.md) plus anything the user's industry overuses.
 
 ### Alignment Protocol
-- Present the 2–3 directions side by side, highlight which one you recommend (and which Motion Intensity Tier fits best), and ask the user **once** to pick, combine, or tweak before you start crafting hero assets.
-- Skip asking only if the user explicitly tells you to decide for them or when running in a non-interactive headless pipeline—in that case, state the chosen direction, archetype, and tier upfront in your plan/summary before writing HTML.
+- Present the 2–3 directions side by side, highlight which one you recommend, and ask the user **once** to pick, combine, or tweak before you start crafting hero assets.
+- Skip asking only if the user explicitly tells you to decide for them or when running in a non-interactive headless pipeline—in that case, state the chosen direction, archetype, and register upfront in your plan/summary before writing HTML.
+- If the user may be away for hours (an async project thread, a queued task), ask once and keep working on the direction you recommend while you wait; switch if their answer differs. A stalled thread costs more than a redone hero asset.
 
 ---
 
@@ -34,13 +35,13 @@ Decide motion in three steps, in this order: **register** (from what the talk is
 
 The register sets the deck's whole motion budget. Name it in the direction proposal and in the `MOTION` comment.
 
-| Presentation | Register | Default beat change | Default entrance | Signature budget | Avoid |
+| Presentation | Register | Default beat change | Default entrance | Signature moments (§2.5) | Avoid |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Investor / business pitch** | Confident, calm | `dip`, `cut` at the turn | `rise`, `unveil` on the headline | 1–2: the problem landing, the key number | stamps, shakes, typed text, bounce |
-| **Research / thesis / academic** | Precise, explanatory | `dip`, `match` between chart states | `rise`; data `draw`n in order | 1: the finding (a `morph` or `draw`) | anything that moves without meaning |
-| **Product / software demo** | Clear, functional | `match` between UI states, `dip` | panels `rise`; real UI state changes | 1–2: the moment the product does the thing (`cursor` once) | fake typing everywhere, zooms |
-| **Story / documentary / brand** | Cinematic, paced | `dip` (fade through black), `camera` pans, one hard `cut` | `unveil`, slow `rise` with long holds | 2: the reveal, the turn | fast tempo, bounce |
-| **Teaching / class / training** | Patient, stepwise | `dip`, `camera` along one diagram | `rise` one point at a time; `focus` the current step | 1: the "aha" step | anything fast or decorative |
+| **Investor / business pitch** | Confident, calm | `dip`, `cut` at the turn | `rise`, `unveil` on the headline | 2: the problem landing, the key number | stamps, shakes, typed text, bounce |
+| **Research / thesis / academic** | Precise, explanatory | `dip`, `match` between chart states | `rise`; data `draw`n in order | 2: the method at work, the finding (a `morph` or `draw`) | anything that moves without meaning |
+| **Product / software demo** | Clear, functional | `match` between UI states, `dip` | panels `rise`; real UI state changes | 2–3: each moment the product does the thing (`cursor` once) | fake typing everywhere, zooms |
+| **Story / documentary / brand** | Cinematic, paced | `dip` (fade through black), `camera` pans, one hard `cut` | `unveil`, slow `rise` with long holds | 2–3: the reveal, the turn | fast tempo, bounce |
+| **Teaching / class / training** | Patient, stepwise | `dip`, `camera` along one diagram | `rise` one point at a time; `focus` the current step | 2: the setup, the "aha" step | anything fast or decorative |
 | **Game / consumer launch / event** | Lively, playful | `push-*`, `zoom`, `cut` | springs with a little overshoot allowed | 2–3 | still no effect on every beat |
 
 If the deck's world has a material (a dossier, a map, a factory floor), let it flavour the *signature* only: a paper world may stamp once at the verdict, a map world draws its route, a machine world lets one gauge snap. The material never licenses an effect on every beat.
@@ -107,7 +108,7 @@ Rules for them: give each deck **two or three** such moments, each tied to the b
 
 ### 2.6 Watch it, don't imagine it
 
-`snapshot.mjs` only sees the final frame. Run `filmstrip.mjs` and read each row: does the motion help the audience read the beat in the right order? Would the beat be worse with no motion at all? If not, remove it. Does the signature moment land, and is it the only one that shouts?
+`snapshot.mjs` only sees the final frame. Run `filmstrip.mjs` (add `--frames --times …` to save full-size PNGs of single moments) and read each row: does the motion help the audience read the beat in the right order? Would the beat be worse with no motion at all? If not, remove it. Does the signature moment land, and is it the only one that shouts?
 
 ---
 
@@ -163,6 +164,7 @@ Insert a dedicated **Hero Asset Craft & Fidelity Pass** *between* Visual Directi
 - Stage real captures large (`65–85%` of `#stage`) with crisp framing and hairline SVG callouts pointing to concrete UI or hardware details.
 - Crop to the part of the screen the beat is about. A full-window capture shrunk to a corner shows "a screenshot" but nothing the audience can read; UI text should land at ≥ 18px on stage (lint: `small-capture`).
 - **Never** substitute a crude CSS/SVG wireframe mockup when a real product screen or photograph can be captured or provided.
+- **Exception for signature moments:** when the idea is the product's own UI changing (a timetable re-planning, rows re-sorting, a rule firing), a still capture cannot move. Rebuild that one component in the DOM from the product's real data, colours and type, and keep a real capture of the same state on the same or the next beat as proof. Mark 2x captures with `data-capture-dpr="2"` so the `small-capture` check measures their UI text exactly.
 
 #### Route B — Zero-Screenshot Proposals, Coursework & Concept Talks
 *(Use when no finished product exists yet, e.g., concept pitches, cultural proposals, coursework, or systems essays.)*
@@ -212,7 +214,7 @@ All helpers arrive in `CHOREO[id](scene, helpers)`. Every one is `?still`-safe (
 | `rise(els, { y, ms, each, delay, blur })` | **Quiet default.** Short lift with a fade on a long deceleration, staggered. | Most content on most beats. |
 | `unveil(el, { from, ms, delay })` | **Quiet.** Text rises out of its own baseline mask. | Headlines, key statements (one per beat). |
 | `focus(keep, { dim, within })` | **Quiet emphasis.** Everything marked `data-focus` (or `within`) recedes except `keep`. | Pointing at one item without effects. |
-| `carry(fromBeat, { select, ms, delay, each, scale })` | **Living objects.** Elements sharing `data-match` with another beat (default: the previous one) start where they were there and travel here. Pair with `transition: "cut"`. | Schedules re-planning, rows re-sorting, earlier details flying into a summary (§2.5). |
+| `carry(fromBeat, { select, ms, delay, each, size, scale })` | **Living objects.** Elements sharing `data-match` with another beat (default: the previous one) start where they were there and travel here. Pair with `transition: "cut"`. `size: true` also eases width and height, so text reflows (a block that halves to make room); `scale: true` eases a transform scale, so text scales with it (shrinking into a summary). Never use `scale` when only one side changes: the text stretches. | Schedules re-planning, rows re-sorting, earlier details flying into a summary (§2.5). |
 | `stagger(els, (el, delay, i) => …, { each, from, delay, seed })` | Offsets a group; `from`: `start`, `end`, `center`, `edges`, `random` (seeded), or an index. | Crowds, grids, letters. |
 | `splitText(el, { by: "char" \| "word" })` | **Accent.** Wraps text in inline-block spans (keeps `<br>`), returns them. Use `char` for CJK. | Kinetic type with `stagger`. |
 | `wipe(el, { from })` / `iris(el, { x, y })` | Hard-edged clip reveal / circular aperture (**accent**). | Replacing statements, revealing photos. |

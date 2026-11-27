@@ -5,7 +5,7 @@ import path from 'node:path';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { getBrowserExecutablePath, launchBrowser, parseCliArgs } from '../scripts/lib/browser.mjs';
-import { isSloganHeadline } from '../scripts/lib/copy-rules.mjs';
+import { checkText, isSloganHeadline } from '../scripts/lib/copy-rules.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
@@ -800,6 +800,72 @@ async function runTests() {
     const noMotion = JSON.parse(runNode('scripts/lint.mjs', [loudPath, '--json', '--motion=false']).stdout);
     assert.ok(!noMotion.warnings.some((w) => /^motion-|^transition-/.test(w.type)), '--motion=false must skip the motion pass');
     console.log('   Motion checks passed.');
+
+    // 14) v1.7: fixes from the cold test
+    console.log('14) Checking v1.7 fixes (fonts, carry size, placeholders, frames)...');
+    // [missing: …] is the skill's own gap marker; on stage it must not pass --strict.
+    assert.ok(checkText('網址：[missing: 正式網址]').some((w) => w.type === 'placeholder'), '[missing: …] must be a placeholder');
+    assert.ok(checkText('Ship date: [ Missing: date ]').some((w) => w.type === 'placeholder'), '[missing: …] match must be case/space tolerant');
+
+    // carry({ size: true }) eases width instead of stretching with scale.
+    const sizePath = path.join(tmpDir, 'carry-size', 'deck.html');
+    assert.equal(runNode('scripts/new-deck.mjs', [sizePath, '--ids', 'a,b']).status, 0);
+    let sizeSrc = fs.readFileSync(sizePath, 'utf8');
+    sizeSrc = sizeSrc
+      .replace(/(<section class="scene" data-beat="a"[^>]*>)/, '$1<div class="bd-probe" data-match="m" style="position:absolute;left:100px;top:500px;width:400px;height:40px;padding:0 10px">課</div>')
+      .replace(/(<section class="scene" data-beat="b"[^>]*>)/, '$1<div class="bd-probe" data-match="m" style="position:absolute;left:100px;top:500px;width:200px;height:40px;padding:0 10px">課</div>')
+      .replace(/\/\/ "a": \(scene[\s\S]*?\/\/ \},/, '"b": (scene, { carry }) => { carry(null, { size: true, ms: 4000 }); },')
+      .replace('{ id: "b",', '{ id: "b", transition: "cut",');
+    fs.writeFileSync(sizePath, sizeSrc, 'utf8');
+    const sizeBrowser = await launchBrowser();
+    try {
+      const page = await (await sizeBrowser.newContext({ viewport: { width: 1920, height: 1080 } })).newPage();
+      await page.goto(pathToFileURL(sizePath).href);
+      await page.waitForFunction(() => document.body.dataset.ready === '1');
+      await page.evaluate(() => window.__beatdeck.goTo(1));
+      const kf = await page.evaluate(() => {
+        const a = document.querySelector('[data-beat="b"] .bd-probe').getAnimations()[0];
+        const k = a ? a.effect.getKeyframes() : [];
+        return k.length ? { w0: k[0].width, w1: k[k.length - 1].width, scale: k[0].scale } : null;
+      });
+      assert.ok(kf, 'carry size must animate');
+      assert.equal(kf.w0, '400px', `size must start at the previous content width (got ${kf.w0})`);
+      assert.equal(kf.w1, '200px', `size must end at its own content width (got ${kf.w1})`);
+      assert.ok(!kf.scale, 'size must not use a transform scale');
+    } finally {
+      await sizeBrowser.close();
+    }
+
+    // fonts.mjs subsets a face to the deck's characters and links it; lint notes text that falls back.
+    const fontPath = path.join(tmpDir, 'fonts', 'deck.html');
+    assert.equal(runNode('scripts/new-deck.mjs', [fontPath, '--ids', 'a', '--lang', 'zh-Hant']).status, 0);
+    let fontSrc = fs.readFileSync(fontPath, 'utf8');
+    fontSrc = fontSrc.replace(/(<section class="scene" data-beat="a"[^>]*>)/, '$1<p class="ff" style="position:absolute;left:200px;top:800px;font:40px BeatdeckFixtureFace, BeatdeckNoSuchFace">選課測試</p>');
+    fs.writeFileSync(fontPath, fontSrc, 'utf8');
+    const before = JSON.parse(runNode('scripts/lint.mjs', [fontPath, '--json', '--motion=false']).stdout);
+    assert.ok(before.notes.some((n) => n.type === 'font-fallback' && /選|課/.test(n.message)), 'lint must note CJK text no named font provides');
+    assert.equal(before.pass, true, 'font-fallback notes must never fail lint');
+    const cjkSource = ['/usr/share/fonts/opentype/unifont/unifont.otf', '/usr/share/fonts/truetype/unifont/unifont.ttf'].find((f) => fs.existsSync(f));
+    if (cjkSource) {
+      const fontsRun = runNode('scripts/fonts.mjs', [fontPath, '--font', `BeatdeckFixtureFace:400=${cjkSource}`]);
+      assert.equal(fontsRun.status, 0, fontsRun.stdout + fontsRun.stderr);
+      assert.ok(fs.existsSync(path.join(tmpDir, 'fonts', 'fonts', 'BeatdeckFixtureFace-400.woff2')), 'fonts.mjs must write the subset');
+      assert.match(fs.readFileSync(fontPath, 'utf8'), /<link rel="stylesheet" href="fonts\/fonts.css">/, 'fonts.mjs must link fonts.css');
+      const after = JSON.parse(runNode('scripts/lint.mjs', [fontPath, '--json', '--motion=false']).stdout);
+      assert.ok(!after.notes.some((n) => n.type === 'font-fallback' && /選|課/.test(n.message)), `embedded face must clear the note: ${JSON.stringify(after.notes)}`);
+    } else {
+      console.log('   (no Unifont on this machine: skipped the fonts.mjs round trip)');
+    }
+    const badFont = runNode('scripts/fonts.mjs', [fontPath, '--font', 'NoWeight=/nope.ttf']);
+    assert.notEqual(badFont.status, 0, 'fonts.mjs must reject a malformed --font');
+
+    // filmstrip --frames saves full-size PNGs of single moments.
+    const framesDir = path.join(tmpDir, 'frames');
+    const framesRun = runNode('scripts/filmstrip.mjs', [MOTION_DECK, '--beats', '2', '--times', '0,300', '--frames', '--out', framesDir]);
+    assert.equal(framesRun.status, 0, framesRun.stdout + framesRun.stderr);
+    const framePng = fs.readdirSync(framesDir).filter((f) => /^frame-02-0300ms\.png$/.test(f));
+    assert.equal(framePng.length, 1, `filmstrip --frames must write frame-02-0300ms.png (got ${fs.readdirSync(framesDir)})`);
+    console.log('   v1.7 checks passed.');
 
     console.log('ALL E2E TESTS PASSED');
   } finally {

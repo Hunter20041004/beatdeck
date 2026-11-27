@@ -68,6 +68,8 @@
     opacity: 0.25; transition: opacity 200ms ease; z-index: 100;
   }
   #hud:hover { opacity: 1; }
+  /* Touch screens: tap zones already page (right 75% next, left 25% back), so the HUD would only cover the stage. */
+  @media (hover: none) and (pointer: coarse) { #hud { display: none; } }
   #hud button { font: inherit; color: inherit; background: none; border: 1px solid #666; padding: 3px 7px; cursor: pointer; }
   #hud button.is-on { background: #ddd; color: #111; }
   #notes-drawer {
@@ -383,11 +385,13 @@
     return keepEls;
   }
 
-  // carry(fromBeat, { select, ms: 1100, delay, each, ease: "inOut", scale: false }) — persistent objects:
+  // carry(fromBeat, { select, ms: 1100, delay, each, ease: "inOut", scale: false, size: false }) — persistent objects:
   // every element here whose data-match also exists in beat `fromBeat` (an id, or omit for the previous
   // beat) starts where it was there and travels to its place here. Pair it with transition "cut" so the
   // change is invisible and only the objects that changed move: a schedule re-planning itself, rows
-  // re-sorting, an earlier detail flying into a summary. `scale: true` also eases its size.
+  // re-sorting, an earlier detail flying into a summary. `size: true` also eases width and height (text
+  // reflows, never stretches: use it when an object changes shape in the layout, e.g. a block that halves).
+  // `scale: true` eases a transform scale instead (text scales with it: use it to shrink into a summary).
   function carry(fromBeat, opts = {}) {
     const host = currentScene;
     if (!host) return [];
@@ -406,9 +410,19 @@
       const b = el.getBoundingClientRect();
       const dx = (a.left - b.left) / k, dy = (a.top - b.top) / k;
       const sx = opts.scale && b.width ? a.width / b.width : 1, sy = opts.scale && b.height ? a.height / b.height : 1;
-      if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5 && Math.abs(sx - 1) < 0.01 && Math.abs(sy - 1) < 0.01) return;
+      const dw = opts.size ? Math.abs(a.width - b.width) / k : 0, dh = opts.size ? Math.abs(a.height - b.height) / k : 0;
+      if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5 && Math.abs(sx - 1) < 0.01 && Math.abs(sy - 1) < 0.01 && dw < 0.5 && dh < 0.5) return;
       const kf = { translate: [`${dx}px ${dy}px`, "0 0"] };
       if (opts.scale) { kf.scale = [`${sx} ${sy}`, "1 1"]; kf.transformOrigin = ["0 0", "0 0"]; }
+      if (opts.size) {
+        const st = getComputedStyle(el);
+        const px = (p) => parseFloat(st[p]) || 0;
+        const cb = st.boxSizing !== "border-box";
+        const padX = cb ? px("paddingLeft") + px("paddingRight") + px("borderLeftWidth") + px("borderRightWidth") : 0;
+        const padY = cb ? px("paddingTop") + px("paddingBottom") + px("borderTopWidth") + px("borderBottomWidth") : 0;
+        kf.width = [`${a.width / k - padX}px`, `${b.width / k - padX}px`];
+        kf.height = [`${a.height / k - padY}px`, `${b.height / k - padY}px`];
+      }
       out.push(...tween(el, kf, { ms: opts.ms || 1100, delay: (opts.delay || 0) + i * (opts.each || 0), ease: opts.ease || "inOut", kind: "carry" }));
     });
     return out;

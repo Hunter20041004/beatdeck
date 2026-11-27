@@ -37,7 +37,7 @@ Motion gives a deck away faster than any colour. Today the usual failure is not 
 
 | Tell | Why it reads as AI | Do instead | Lint |
 | :--- | :--- | :--- | :--- |
-| An effect on every beat: stamps, shakes, typed text, split letters | Effects applied because they exist | Pick the register first; most beats `rise`/`unveil`/`fade`, one or two signature moments (craft-and-direction §2.3) | `motion-accent-overuse` |
+| An effect on every beat: stamps, shakes, typed text, split letters | Effects applied because they exist | Pick the register first; most beats `rise`/`unveil`/`fade`, two or three signature moments (craft-and-direction §2.5) | `motion-accent-overuse` |
 | Three effects fighting inside one beat | Each helper added to make the beat "interesting" | One gesture per beat; fix the composition instead | `motion-busy` |
 | A different flashy transition at every click (iris, zoom, blur, cover…) | The transition menu used as a tour | `fade`, `cut`, `match`, `camera` for most changes; at most two showy types, each on a story turn | `transition-variety` |
 | Everything bounces | Springs and `snap` used as decoration | Critically damped springs and `ease.out`; overshoot only in a play register | `motion-bounce` |
@@ -61,7 +61,7 @@ Motion gives a deck away faster than any colour. Today the usual failure is not 
 | Unsourced or suspiciously round statistics ("90% of teams…", "10× faster"), "studies show…" | Only numbers traceable to a named source; otherwise mark `[missing: …]` and ask | review (fact lens) |
 | Hedged, point-of-view-free claims ("can help", "may enable", "various benefits") | Commit to a claim the speaker can defend | review |
 | Summary slide that restates every previous beat | One synthesis beat that changes how the audience sees the opening scene | review |
-| Placeholder leftovers: TODO, TBD, XX%, [Company], lorem ipsum, 某某, 〇〇 | Real content, or an explicit question to the user | `placeholder` |
+| Placeholder leftovers: TODO, TBD, XX%, [Company], lorem ipsum, 某某, 〇〇, an unfilled `[missing: …]` on stage | Real content, or an explicit question to the user | `placeholder` |
 
 ### Internal process leakage
 
@@ -167,7 +167,7 @@ Run this on the contact sheet (`snapshot.mjs`), the motion filmstrip (`filmstrip
 3. **Speaker test:** read every `say` aloud. Would *this* speaker say it, in this room? Cut any sentence that sounds like a press release.
 4. **Glance test:** look at the contact sheet for five seconds. Do beats share one visual system *and* differ in composition? Any beat that looks like a template default?
 5. **Claim test:** read only the headlines in order. Do they tell the story as claims, without the body text?
-6. **Motion test:** read `filmstrip.png` row by row. Does each motion help the audience read the beat in the right order, and would the beat be worse without it? Is there exactly one or two moments that shout, and are they where the story turns?
+6. **Motion test:** read `filmstrip.png` row by row. Does each motion help the audience read the beat in the right order, and would the beat be worse without it? Are there two or three moments where the content itself moves, and are they where the story turns?
 7. **Need-to-know test:** for every fact on stage, ask whether this audience would understand or act differently without it. Revision history, review rounds, tooling, and submission notes almost never pass.
 
 ---

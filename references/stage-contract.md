@@ -84,6 +84,7 @@ Enabled when neither `?still`, `?video`, nor `?bare` is active (always ignore ke
 - **`F`**: Toggle browser fullscreen.
 - **`N`**: Toggle the speaker-notes drawer/overlay displaying current beat progress (`i / total`), chapter, `say`, `note`, and estimated duration.
 - **`C`**: Toggle the **`400×300` bottom-right camera safe-zone overlay** in stage coordinates so a presenter recording webcam picture-in-picture can verify no visual content sits under their camera box.
+- **Touch screens** (`hover: none` and `pointer: coarse`): the skeleton hides the HUD, since the tap zones already page and the HUD would only cover the stage.
 
 ---
 
